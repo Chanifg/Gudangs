@@ -1,0 +1,57 @@
+name: gudangs
+description: "Aplikasi manajemen gudang, pengiriman, inventori, karyawan, dan estimasi gaji — offline-first."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # UI
+  cupertino_icons: ^1.0.8
+  google_fonts: ^6.2.1
+
+  # State Management
+  flutter_riverpod: ^2.6.1
+
+  # Navigation
+  go_router: ^14.8.1
+
+  # Local Database
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  # Biometric Auth
+  local_auth: ^2.3.0
+
+  # Export
+  pdf: ^3.11.1
+  printing: ^5.13.2
+  excel: ^4.0.6
+
+  # File System
+  path_provider: ^2.1.5
+  share_plus: ^10.1.4
+
+  # Charts
+  fl_chart: ^0.69.0
+
+  # Utilities
+  uuid: ^4.5.1
+  intl: ^0.19.0
+  flutter_secure_storage: ^10.3.1
+  bcrypt: ^1.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  build_runner: ^2.4.13
+  hive_generator: ^2.0.1
+
+flutter:
+  uses-material-design: true
