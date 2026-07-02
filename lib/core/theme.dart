@@ -42,10 +42,10 @@ class AppTheme {
           displaySmall: TextStyle(fontWeight: FontWeight.bold),
           headlineLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, letterSpacing: -0.02, color: darkNavy),
           headlineMedium: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: -0.01, color: darkNavy),
-          headlineSmall: TextStyle(fontSize: 20, fontWeight: FontWeight.semibold, color: darkNavy),
+          headlineSmall: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: darkNavy),
           titleLarge: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: darkNavy),
-          titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.semibold, color: darkNavy),
-          titleSmall: TextStyle(fontSize: 14, fontWeight: FontWeight.semibold, color: darkNavy),
+          titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: darkNavy),
+          titleSmall: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: darkNavy),
           bodyLarge: TextStyle(fontSize: 16, color: darkNavy),
           bodyMedium: TextStyle(fontSize: 14, color: darkNavy),
           bodySmall: TextStyle(fontSize: 12, color: slateGrey),
@@ -61,7 +61,7 @@ class AppTheme {
         scrolledUnderElevation: 1,
         titleTextStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: darkNavy),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: Colors.white,
         elevation: 0,
         shape: RoundedRectangleBorder(
