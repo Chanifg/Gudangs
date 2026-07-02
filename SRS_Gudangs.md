@@ -1,6 +1,6 @@
 # SRS — Software Requirements Specification
 # Aplikasi: **Gudangs**
-**Versi Dokumen:** 1.0.0  
+**Versi Dokumen:** 1.1.0  
 **Tanggal:** 2 Juli 2026  
 **Status:** Draft untuk Review  
 **Standar Referensi:** IEEE 830-1998  
@@ -43,8 +43,11 @@ Gudangs adalah aplikasi manajemen gudang mandiri untuk usaha kecil dan menengah.
 
 - Autentikasi biometrik dan PIN
 - Dashboard statistik operasional
-- Manajemen inventori (produk & stok)
-- Pencatatan barang masuk (inbound) dan barang keluar (outbound)
+- Manajemen inventori terpisah: Bahan Baku (RawMaterial) dan Barang Jadi (FinishedGood)
+- Pencatatan barang masuk (inbound) khusus Bahan Baku
+- Pencatatan barang keluar (outbound) khusus Barang Jadi
+- **Bill of Materials (BOM):** formula produksi yang mendefinisikan komposisi bahan baku per unit barang jadi
+- **Modul Produksi:** konversi Bahan Baku → Barang Jadi dengan validasi stok dan kalkulasi HPP otomatis
 - Manajemen karyawan dan aktivitas harian
 - Kalkulasi estimasi gaji karyawan
 - Pelaporan dan ekspor dokumen (PDF & Excel/CSV)
@@ -56,9 +59,14 @@ Sistem ini **tidak** mencakup sinkronisasi cloud, fitur multi-pengguna, atau int
 | Istilah | Definisi |
 |---------|----------|
 | **Admin** | Pengguna tunggal aplikasi Gudangs (pemilik/kepala gudang) |
-| **Inbound** | Proses penerimaan barang masuk ke gudang |
-| **Outbound** | Proses pengiriman barang keluar dari gudang |
+| **Inbound** | Proses penerimaan bahan baku masuk ke gudang |
+| **Outbound** | Proses pengiriman barang jadi keluar dari gudang |
 | **SKU** | Stock Keeping Unit — kode unik untuk mengidentifikasi setiap produk |
+| **BOM** | Bill of Materials — formula produksi yang mendefinisikan bahan baku dan jumlahnya per unit barang jadi |
+| **HPP** | Harga Pokok Produksi — total biaya bahan baku yang digunakan dalam satu batch produksi dibagi jumlah unit yang dihasilkan |
+| **RawMaterial** | Entitas bahan baku yang dapat dibeli (inbound) dan digunakan dalam produksi |
+| **FinishedGood** | Entitas barang jadi hasil produksi yang dapat dijual (outbound) |
+| **Batch Produksi** | Satu sesi proses produksi menggunakan BOM tertentu untuk menghasilkan sejumlah unit barang jadi |
 | **Hive** | Database NoSQL lokal berbasis key-value untuk Flutter |
 | **Riverpod** | State management library untuk Flutter |
 | **go_router** | Library navigasi deklaratif untuk Flutter |
@@ -120,14 +128,17 @@ Fungsi utama sistem dirangkum sebagai berikut:
 |-----|--------------|-------------------|
 | F01 | Autentikasi | Login dengan biometrik atau PIN |
 | F02 | Dashboard | Tampilan ringkasan statistik dan grafik tren |
-| F03 | Manajemen Inventori | CRUD produk dan monitoring stok real-time |
-| F04 | Inbound | Pencatatan penerimaan barang dengan kalkulasi biaya |
-| F05 | Outbound | Pencatatan pengiriman barang dengan kalkulasi nilai |
-| F06 | Manajemen Karyawan | CRUD data karyawan dengan status aktif/nonaktif |
-| F07 | Aktivitas Karyawan | Pencatatan pekerjaan harian dengan estimasi gaji |
-| F08 | Estimasi Gaji | Kalkulasi gaji berdasarkan aktivitas dan tarif |
-| F09 | Pengaturan | Konfigurasi jenis pekerjaan, tarif, PIN, dan info app |
-| F10 | Laporan & Export | Generate dan export laporan ke PDF dan Excel/CSV |
+| F03 | Manajemen Bahan Baku | CRUD RawMaterial dan monitoring stok bahan baku real-time |
+| F04 | Manajemen Barang Jadi | CRUD FinishedGood dan monitoring stok barang jadi real-time |
+| F05 | Inbound | Pencatatan pembelian bahan baku dengan kalkulasi biaya |
+| F06 | Outbound | Pencatatan pengiriman barang jadi dengan kalkulasi nilai |
+| F07 | Bill of Materials (BOM) | CRUD formula produksi per barang jadi |
+| F08 | Modul Produksi | Konversi bahan baku menjadi barang jadi dengan validasi stok dan kalkulasi HPP |
+| F09 | Manajemen Karyawan | CRUD data karyawan dengan status aktif/nonaktif |
+| F10 | Aktivitas Karyawan | Pencatatan pekerjaan harian dengan estimasi gaji |
+| F11 | Estimasi Gaji | Kalkulasi gaji berdasarkan aktivitas dan tarif |
+| F12 | Pengaturan | Konfigurasi jenis pekerjaan, tarif, PIN, dan info app |
+| F13 | Laporan & Export | Generate dan export laporan ke PDF dan Excel/CSV |
 
 ### 2.3 User Characteristics
 
@@ -641,6 +652,244 @@ Aplikasi ini memiliki **satu peran pengguna tunggal**: Admin.
 
 ---
 
+#### FR-031: Tambah Bill of Materials (BOM)
+
+**Nama:** Create Bill of Materials  
+**Deskripsi:** Admin membuat BOM baru yang mendefinisikan formula produksi suatu barang jadi.
+
+**Kondisi Pra:** Minimal satu FinishedGood dan satu RawMaterial terdaftar di sistem.  
+**Kondisi Pasca:** BOM baru tersimpan di Hive beserta daftar BOMComponent-nya.
+
+| Sub-ID | Deskripsi |
+|--------|-----------|
+| FR-031.1 | Admin membuka menu BOM > tombol Tambah BOM. |
+| FR-031.2 | Sistem menampilkan form: Nama BOM (wajib), Pilih Barang Jadi (dropdown FinishedGood, wajib). |
+| FR-031.3 | Admin menambahkan komponen bahan baku: pilih RawMaterial + input kuantitas per unit barang jadi (qty > 0). |
+| FR-031.4 | Minimal satu komponen bahan baku wajib ditambahkan. |
+| FR-031.5 | Sistem memvalidasi bahwa satu FinishedGood belum memiliki BOM aktif (relasi 1:1). |
+| FR-031.6 | Sistem menyimpan BillOfMaterials ke Hive beserta daftar BOMComponent terkait. |
+| FR-031.7 | Sistem menampilkan notifikasi sukses dan kembali ke daftar BOM. |
+
+---
+
+#### FR-032: Manajemen Komponen BOM
+
+**Nama:** BOM Component Management  
+**Deskripsi:** Setiap BOM dapat memiliki banyak komponen bahan baku yang dapat dikelola secara dinamis.
+
+| Sub-ID | Deskripsi |
+|--------|-----------|
+| FR-032.1 | Admin dapat menambah komponen bahan baku baru ke BOM yang sudah ada. |
+| FR-032.2 | Admin dapat mengubah kuantitas per unit (quantityPerUnit) dari komponen yang sudah ada. |
+| FR-032.3 | Admin dapat menghapus komponen dari BOM (minimal harus tersisa satu komponen). |
+| FR-032.4 | Setiap komponen wajib memiliki: rawMaterialId dan quantityPerUnit (> 0). |
+| FR-032.5 | Satu bahan baku hanya boleh muncul satu kali dalam satu BOM (tidak ada duplikat komponen). |
+
+---
+
+#### FR-033: Validasi Ketersediaan Stok Sebelum Produksi
+
+**Nama:** Stock Validation Before Production  
+**Deskripsi:** Sistem memeriksa ketersediaan stok semua komponen bahan baku sebelum proses produksi dapat dilanjutkan.
+
+**Kondisi Pra:** Admin telah memilih BOM dan memasukkan jumlah unit yang akan diproduksi.  
+**Kondisi Pasca:** Sistem menampilkan hasil validasi (cukup / tidak cukup).
+
+| Sub-ID | Deskripsi |
+|--------|-----------|
+| FR-033.1 | Saat admin memasukkan jumlah unit produksi, sistem secara real-time menghitung kebutuhan bahan baku: `kebutuhan = quantityPerUnit × jumlahUnitProduksi` untuk setiap komponen. |
+| FR-033.2 | Sistem membandingkan kebutuhan setiap komponen dengan `currentStock` RawMaterial yang bersangkutan. |
+| FR-033.3 | Sistem menghasilkan daftar validasi per komponen: nama bahan baku, stok tersedia, kebutuhan, status (cukup/kurang). |
+| FR-033.4 | Tombol konfirmasi produksi diaktifkan hanya jika SEMUA komponen berstatus cukup. |
+
+---
+
+#### FR-034: Blokir Produksi Jika Stok Tidak Mencukupi
+
+**Nama:** Block Production on Insufficient Stock  
+**Deskripsi:** Sistem mencegah eksekusi produksi jika ada satu atau lebih komponen bahan baku yang stoknya tidak mencukupi.
+
+| Sub-ID | Deskripsi |
+|--------|-----------|
+| FR-034.1 | Jika ada komponen yang kurang stoknya, tombol konfirmasi produksi dinonaktifkan (disabled). |
+| FR-034.2 | Sistem menampilkan daftar bahan baku yang kurang dengan format: "[Nama Bahan Baku]: Dibutuhkan [X] [satuan], Tersedia [Y] [satuan], Kurang [Z] [satuan]". |
+| FR-034.3 | Pesan error ditampilkan secara inline pada layar konfirmasi produksi, bukan hanya di snackbar. |
+| FR-034.4 | Admin tidak dapat memaksakan produksi melebihi stok tersedia (tidak ada override). |
+
+---
+
+#### FR-035: Pengurangan Stok Bahan Baku Otomatis
+
+**Nama:** Auto-Deduct Raw Material Stock  
+**Deskripsi:** Saat produksi dikonfirmasi, sistem secara otomatis mengurangi stok setiap bahan baku yang digunakan.
+
+**Kondisi Pra:** Validasi stok semua komponen lulus (semua cukup).  
+**Kondisi Pasca:** `currentStock` setiap RawMaterial yang digunakan berkurang sesuai pemakaian aktual.
+
+| Sub-ID | Deskripsi |
+|--------|-----------|
+| FR-035.1 | Saat admin menekan konfirmasi produksi, sistem menghitung pemakaian aktual per komponen: `pemakaianAktual = quantityPerUnit × jumlahUnitProduksi`. |
+| FR-035.2 | Sistem memperbarui `currentStock` setiap RawMaterial: `currentStock -= pemakaianAktual`. |
+| FR-035.3 | Perubahan stok bahan baku dicatat sebagai MaterialUsage dalam ProductionRecord. |
+| FR-035.4 | Operasi pengurangan stok dilakukan secara atomik (semua komponen diperbarui dalam satu transaksi). |
+
+---
+
+#### FR-036: Penambahan Stok Barang Jadi Otomatis
+
+**Nama:** Auto-Increase Finished Good Stock  
+**Deskripsi:** Saat produksi dikonfirmasi, sistem secara otomatis menambah stok barang jadi yang diproduksi.
+
+**Kondisi Pra:** Pengurangan stok bahan baku (FR-035) telah berhasil.  
+**Kondisi Pasca:** `currentStock` FinishedGood bertambah sejumlah unit yang diproduksi.
+
+| Sub-ID | Deskripsi |
+|--------|-----------|
+| FR-036.1 | Sistem memperbarui `currentStock` FinishedGood terkait: `currentStock += jumlahUnitProduksi`. |
+| FR-036.2 | Sistem memperbarui field `lastHPP` pada FinishedGood dengan nilai HPP batch ini. |
+| FR-036.3 | Perubahan stok barang jadi tercatat dalam ProductionRecord. |
+
+---
+
+#### FR-037: Kalkulasi HPP Otomatis per Batch Produksi
+
+**Nama:** Auto-Calculate HPP (Cost of Goods Manufactured)  
+**Deskripsi:** Sistem menghitung Harga Pokok Produksi (HPP) secara otomatis untuk setiap batch produksi.
+
+| Sub-ID | Deskripsi |
+|--------|-----------|
+| FR-037.1 | Untuk setiap komponen yang digunakan, sistem mengambil `defaultUnitCost` dari RawMaterial sebagai harga satuan bahan baku. |
+| FR-037.2 | Sistem menghitung biaya per komponen: `biayaKomponen = pemakaianAktual × defaultUnitCost`. |
+| FR-037.3 | Sistem menjumlahkan biaya semua komponen: `totalMaterialCost = Σ biayaKomponen`. |
+| FR-037.4 | Sistem menghitung HPP per unit: `hpp = totalMaterialCost ÷ jumlahUnitProduksi`. |
+| FR-037.5 | Nilai HPP ditampilkan pada layar konfirmasi sebelum produksi dikonfirmasi. |
+| FR-037.6 | Nilai HPP disimpan dalam ProductionRecord dan diperbarui ke field `lastHPP` pada FinishedGood. |
+
+---
+
+#### FR-038: Riwayat Produksi
+
+**Nama:** Production History  
+**Deskripsi:** Sistem menyimpan riwayat lengkap setiap batch produksi yang telah dikonfirmasi.
+
+| Sub-ID | Deskripsi |
+|--------|-----------|
+| FR-038.1 | Setiap batch produksi yang dikonfirmasi menghasilkan satu ProductionRecord di Hive. |
+| FR-038.2 | ProductionRecord menyimpan: bomId, finishedGoodId, nama produk (snapshot), jumlahUnitProduksi, daftar MaterialUsage, totalMaterialCost, hpp, tanggal, dan catatan. |
+| FR-038.3 | Daftar MaterialUsage menyimpan per komponen: rawMaterialId, nama bahan (snapshot), quantityUsed, dan unitCostAtTime (snapshot harga saat produksi). |
+| FR-038.4 | Admin dapat melihat daftar riwayat produksi diurutkan dari terbaru. |
+| FR-038.5 | Admin dapat melihat detail setiap ProductionRecord termasuk breakdown MaterialUsage. |
+| FR-038.6 | Admin dapat memfilter riwayat produksi berdasarkan rentang tanggal dan/atau produk jadi. |
+
+---
+
+#### FR-039: Edit & Hapus BOM
+
+**Nama:** Update & Delete BOM  
+**Deskripsi:** Admin dapat mengubah atau menghapus BOM yang sudah ada.
+
+| Sub-ID | Deskripsi |
+|--------|-----------|
+| FR-039.1 | Admin memilih BOM dari daftar dan menekan Edit. |
+| FR-039.2 | Sistem menampilkan form BOM terisi data yang dapat diubah (nama BOM, komponen). |
+| FR-039.3 | Admin menyimpan perubahan; sistem memperbarui BillOfMaterials dan BOMComponent terkait. |
+| FR-039.4 | Admin dapat menghapus BOM dengan konfirmasi dialog. |
+| FR-039.5 | Sistem memperingatkan jika BOM yang akan dihapus sudah pernah digunakan dalam produksi (riwayat tetap ada, BOM dihapus). |
+
+---
+
+#### FR-040: Daftar BOM
+
+**Nama:** List Bill of Materials  
+**Deskripsi:** Admin melihat daftar semua BOM yang terdaftar.
+
+| Sub-ID | Deskripsi |
+|--------|-----------|
+| FR-040.1 | Sistem menampilkan daftar semua BOM dari Hive. |
+| FR-040.2 | Setiap item menampilkan: Nama BOM, Nama Barang Jadi, Jumlah Komponen Bahan Baku. |
+| FR-040.3 | Admin dapat mencari BOM berdasarkan nama BOM atau nama barang jadi. |
+| FR-040.4 | Admin dapat menekan BOM untuk melihat detail komponen. |
+
+---
+
+#### FR-041: CRUD Bahan Baku (RawMaterial)
+
+**Nama:** Raw Material Management  
+**Deskripsi:** Admin mengelola daftar bahan baku sebagai entitas terpisah dari barang jadi.
+
+| Sub-ID | Deskripsi |
+|--------|-----------|
+| FR-041.1 | Admin dapat menambah RawMaterial baru dengan field: Nama (wajib), SKU (wajib, unik), Satuan (wajib), Stok Awal (>= 0), Harga Beli Per Unit default (>= 0). |
+| FR-041.2 | Admin dapat mengedit data RawMaterial (nama, satuan, harga beli default). |
+| FR-041.3 | Admin dapat menonaktifkan (soft delete) RawMaterial; tidak dapat dihapus jika masih digunakan dalam BOM aktif. |
+| FR-041.4 | Admin dapat melihat daftar RawMaterial dengan stok terkini dan fitur pencarian. |
+| FR-041.5 | Riwayat perubahan stok RawMaterial dapat dilihat di halaman detail. |
+
+---
+
+#### FR-042: CRUD Barang Jadi (FinishedGood)
+
+**Nama:** Finished Good Management  
+**Deskripsi:** Admin mengelola daftar barang jadi sebagai entitas terpisah dari bahan baku.
+
+| Sub-ID | Deskripsi |
+|--------|-----------|
+| FR-042.1 | Admin dapat menambah FinishedGood baru dengan field: Nama (wajib), SKU (wajib, unik), Satuan (wajib), Stok Awal (>= 0), Harga Jual default (>= 0). |
+| FR-042.2 | Admin dapat mengedit data FinishedGood (nama, satuan, harga jual default). |
+| FR-042.3 | Admin dapat menonaktifkan (soft delete) FinishedGood; tidak dapat dihapus jika masih digunakan dalam BOM aktif. |
+| FR-042.4 | Admin dapat melihat daftar FinishedGood dengan stok terkini, harga jual, dan lastHPP. |
+| FR-042.5 | Riwayat perubahan stok FinishedGood dapat dilihat di halaman detail (sumber: produksi dan outbound). |
+
+---
+
+#### FR-043: Formulir Produksi
+
+**Nama:** Production Form  
+**Deskripsi:** Layar utama tempat admin memulai proses produksi.
+
+| Sub-ID | Deskripsi |
+|--------|-----------|
+| FR-043.1 | Admin membuka menu Produksi > tombol Mulai Produksi. |
+| FR-043.2 | Admin memilih BOM dari dropdown (menampilkan nama BOM + nama barang jadi). |
+| FR-043.3 | Admin memasukkan jumlah unit yang akan diproduksi (number, wajib > 0). |
+| FR-043.4 | Admin dapat menambahkan catatan produksi (opsional). |
+| FR-043.5 | Sistem menampilkan tanggal produksi (default hari ini, dapat diubah). |
+| FR-043.6 | Sistem secara real-time menampilkan: kebutuhan bahan baku per komponen, status ketersediaan stok, estimasi totalMaterialCost, dan estimasi HPP per unit. |
+
+---
+
+#### FR-044: Konfirmasi & Eksekusi Produksi
+
+**Nama:** Production Confirmation & Execution  
+**Deskripsi:** Admin mengkonfirmasi produksi dan sistem mengeksekusi seluruh perubahan data secara atomik.
+
+**Kondisi Pra:** Semua komponen bahan baku memiliki stok yang mencukupi (FR-033 lulus).  
+**Kondisi Pasca:** Stok bahan baku berkurang, stok barang jadi bertambah, ProductionRecord tersimpan.
+
+| Sub-ID | Deskripsi |
+|--------|-----------|
+| FR-044.1 | Admin menekan tombol "Konfirmasi Produksi". |
+| FR-044.2 | Sistem menampilkan dialog konfirmasi ringkasan: BOM yang digunakan, jumlah unit, daftar bahan yang dipakai, estimasi HPP. |
+| FR-044.3 | Saat Admin menekan "Ya, Produksi" pada dialog, sistem menjalankan operasi atomik. |
+| FR-044.4 | Operasi atomik mencakup: pengurangan currentStock tiap RawMaterial, penambahan currentStock FinishedGood, pembaruan lastHPP FinishedGood, dan penyimpanan ProductionRecord. |
+| FR-044.5 | Jika salah satu operasi gagal, seluruh operasi di-rollback. |
+| FR-044.6 | Sistem menampilkan notifikasi sukses dengan ringkasan produksi dan navigasi ke halaman riwayat produksi. |
+
+---
+
+#### FR-045: Dashboard — Ringkasan Produksi
+
+**Nama:** Production Summary on Dashboard  
+**Deskripsi:** Dashboard menampilkan informasi ringkasan terkait aktivitas produksi.
+
+| Sub-ID | Deskripsi |
+|--------|-----------|
+| FR-045.1 | Dashboard menampilkan jumlah batch produksi yang dilakukan hari ini. |
+| FR-045.2 | Dashboard menampilkan total unit barang jadi yang diproduksi dalam periode terpilih. |
+| FR-045.3 | Dashboard menampilkan total biaya produksi (totalMaterialCost) dalam periode terpilih. |
+
+---
+
 ### 3.2 Non-Functional Requirements
 
 ---
@@ -777,6 +1026,33 @@ Aplikasi ini memiliki **satu peran pengguna tunggal**: Admin.
 **Kategori:** Maintainability  
 **Deskripsi:** Unit test coverage untuk logika bisnis inti (kalkulasi gaji, update stok, kalkulasi margin) harus minimal 60%.  
 **Cara Verifikasi:** `flutter test --coverage`; inspeksi laporan lcov.
+
+---
+
+#### NFR-016: Performa — Validasi Stok Produksi
+
+**ID:** NFR-016  
+**Kategori:** Performa  
+**Deskripsi:** Proses validasi ketersediaan stok untuk semua komponen BOM harus selesai dalam <= 500 ms, bahkan untuk BOM dengan hingga 50 komponen bahan baku.  
+**Cara Verifikasi:** Integration test dengan BOM yang memiliki 50 komponen; diukur dengan stopwatch.
+
+---
+
+#### NFR-017: Keandalan — Atomisitas Operasi Produksi
+
+**ID:** NFR-017  
+**Kategori:** Keandalan  
+**Deskripsi:** Seluruh operasi produksi (pengurangan stok bahan baku + penambahan stok barang jadi + penyimpanan ProductionRecord) harus bersifat atomik. Jika salah satu operasi gagal, seluruh operasi harus di-rollback untuk mencegah data stok menjadi tidak konsisten.  
+**Cara Verifikasi:** Test dengan simulasi kegagalan di tengah operasi; verifikasi rollback berhasil.
+
+---
+
+#### NFR-018: Akurasi — Kalkulasi HPP
+
+**ID:** NFR-018  
+**Kategori:** Keandalan  
+**Deskripsi:** Kalkulasi HPP harus akurat hingga 2 angka desimal. Tidak boleh ada selisih pembulatan yang melebihi Rp 1 dari total biaya aktual.  
+**Cara Verifikasi:** Unit test kalkulasi HPP dengan berbagai skenario (bilangan bulat, desimal, volume besar).
 
 ---
 
@@ -937,6 +1213,142 @@ enum OutboundStatus { pending, terkirim, dibatalkan }
 
 ---
 
+### 4.8 Entity: RawMaterial (Bahan Baku)
+
+**Deskripsi:** Merepresentasikan satu jenis bahan baku yang dapat dibeli (inbound) dan digunakan dalam proses produksi.
+
+**Box Hive:** `raw_materials`  
+**Adapter:** `RawMaterialAdapter`
+
+| Field | Tipe Data | Nullable | Deskripsi |
+|-------|-----------|----------|-----------|
+| `id` | String (UUID) | Tidak | Identifier unik bahan baku (primary key) |
+| `name` | String | Tidak | Nama bahan baku (mis: Kain, Benang, Kancing) |
+| `sku` | String | Tidak | Kode SKU unik bahan baku |
+| `unit` | String | Tidak | Satuan bahan baku (mis: meter, rol, pcs) |
+| `currentStock` | double | Tidak | Jumlah stok saat ini (selalu >= 0) |
+| `defaultUnitCost` | double | Tidak | Harga beli per unit default (>= 0) dalam rupiah |
+| `isDeleted` | bool | Tidak | Soft delete flag (default: false) |
+| `createdAt` | DateTime | Tidak | Timestamp pembuatan record |
+| `updatedAt` | DateTime | Tidak | Timestamp terakhir diperbarui |
+
+**Constraints:**
+- `sku` harus unik di seluruh collection raw_materials.
+- `currentStock` tidak boleh negatif.
+- Tidak dapat dihapus (hard delete) jika masih menjadi komponen BOM aktif.
+
+---
+
+### 4.9 Entity: FinishedGood (Barang Jadi)
+
+**Deskripsi:** Merepresentasikan satu jenis barang jadi hasil produksi yang dapat dijual (outbound).
+
+**Box Hive:** `finished_goods`  
+**Adapter:** `FinishedGoodAdapter`
+
+| Field | Tipe Data | Nullable | Deskripsi |
+|-------|-----------|----------|-----------|
+| `id` | String (UUID) | Tidak | Identifier unik barang jadi (primary key) |
+| `name` | String | Tidak | Nama barang jadi (mis: Baju Kemeja, Celana Jeans) |
+| `sku` | String | Tidak | Kode SKU unik barang jadi |
+| `unit` | String | Tidak | Satuan barang jadi (mis: pcs, lusin, kodi) |
+| `currentStock` | double | Tidak | Jumlah stok saat ini (selalu >= 0) |
+| `defaultUnitPrice` | double | Tidak | Harga jual per unit default (>= 0) dalam rupiah |
+| `lastHPP` | double | Ya | HPP per unit dari batch produksi terakhir (null jika belum pernah diproduksi) |
+| `isDeleted` | bool | Tidak | Soft delete flag (default: false) |
+| `createdAt` | DateTime | Tidak | Timestamp pembuatan record |
+| `updatedAt` | DateTime | Tidak | Timestamp terakhir diperbarui |
+
+**Constraints:**
+- `sku` harus unik di seluruh collection finished_goods.
+- `currentStock` tidak boleh negatif.
+- Tidak dapat dihapus (hard delete) jika masih direferensikan oleh BOM aktif.
+
+---
+
+### 4.10 Entity: BillOfMaterials
+
+**Deskripsi:** Merepresentasikan formula produksi yang mendefinisikan bahan baku dan kuantitasnya untuk menghasilkan satu unit barang jadi.
+
+**Box Hive:** `bill_of_materials`  
+**Adapter:** `BillOfMaterialsAdapter`
+
+| Field | Tipe Data | Nullable | Deskripsi |
+|-------|-----------|----------|-----------|
+| `id` | String (UUID) | Tidak | Identifier unik BOM (primary key) |
+| `name` | String | Tidak | Nama deskriptif BOM (mis: "Formula Baju Kemeja S") |
+| `finishedGoodId` | String | Tidak | Referensi ke FinishedGood.id (relasi 1:1) |
+| `finishedGoodName` | String | Tidak | Snapshot nama barang jadi |
+| `components` | List\<BOMComponent\> | Tidak | Daftar komponen bahan baku dalam BOM (minimal 1) |
+| `createdAt` | DateTime | Tidak | Timestamp pembuatan record |
+| `updatedAt` | DateTime | Tidak | Timestamp terakhir diperbarui |
+
+**Constraints:**
+- Satu `finishedGoodId` hanya boleh muncul dalam satu BOM aktif (relasi 1:1).
+- `components` tidak boleh kosong.
+
+---
+
+### 4.11 Embedded Object: BOMComponent
+
+**Deskripsi:** Merepresentasikan satu komponen bahan baku dalam sebuah BOM, disimpan sebagai embedded object di dalam BillOfMaterials.
+
+**Catatan:** Bukan entitas tersendiri di Hive Box, melainkan embedded dalam List\<BOMComponent\> pada BillOfMaterials.
+
+| Field | Tipe Data | Nullable | Deskripsi |
+|-------|-----------|----------|-----------|
+| `rawMaterialId` | String | Tidak | Referensi ke RawMaterial.id |
+| `rawMaterialName` | String | Tidak | Snapshot nama bahan baku |
+| `rawMaterialUnit` | String | Tidak | Snapshot satuan bahan baku |
+| `quantityPerUnit` | double | Tidak | Jumlah bahan baku yang dibutuhkan per 1 unit barang jadi (> 0) |
+
+**Constraints:**
+- `quantityPerUnit` harus > 0.
+- Dalam satu BOM, `rawMaterialId` tidak boleh duplikat.
+
+---
+
+### 4.12 Entity: ProductionRecord
+
+**Deskripsi:** Merepresentasikan satu batch produksi yang telah dikonfirmasi dan dieksekusi.
+
+**Box Hive:** `production_records`  
+**Adapter:** `ProductionRecordAdapter`
+
+| Field | Tipe Data | Nullable | Deskripsi |
+|-------|-----------|----------|-----------|
+| `id` | String (UUID) | Tidak | Identifier unik record produksi (primary key) |
+| `bomId` | String | Tidak | Referensi ke BillOfMaterials.id |
+| `bomName` | String | Tidak | Snapshot nama BOM saat produksi |
+| `finishedGoodId` | String | Tidak | Referensi ke FinishedGood.id |
+| `finishedGoodName` | String | Tidak | Snapshot nama barang jadi saat produksi |
+| `quantityProduced` | double | Tidak | Jumlah unit barang jadi yang berhasil diproduksi (> 0) |
+| `materialsUsed` | List\<MaterialUsage\> | Tidak | Daftar bahan baku yang digunakan beserta detail biaya |
+| `totalMaterialCost` | double | Tidak | Total biaya bahan baku yang digunakan dalam batch ini |
+| `hpp` | double | Tidak | HPP per unit: totalMaterialCost ÷ quantityProduced |
+| `date` | DateTime | Tidak | Tanggal produksi dilakukan |
+| `note` | String | Ya | Catatan/keterangan batch produksi |
+| `createdAt` | DateTime | Tidak | Timestamp pembuatan record |
+
+---
+
+### 4.13 Embedded Object: MaterialUsage
+
+**Deskripsi:** Merepresentasikan pemakaian satu bahan baku dalam satu batch produksi, disimpan sebagai embedded object di dalam ProductionRecord.
+
+**Catatan:** Bukan entitas tersendiri di Hive Box, melainkan embedded dalam List\<MaterialUsage\> pada ProductionRecord.
+
+| Field | Tipe Data | Nullable | Deskripsi |
+|-------|-----------|----------|-----------|
+| `rawMaterialId` | String | Tidak | Referensi ke RawMaterial.id |
+| `rawMaterialName` | String | Tidak | Snapshot nama bahan baku saat produksi |
+| `rawMaterialUnit` | String | Tidak | Snapshot satuan bahan baku saat produksi |
+| `quantityUsed` | double | Tidak | Jumlah bahan baku yang benar-benar digunakan |
+| `unitCostAtTime` | double | Tidak | Harga per unit bahan baku saat produksi (snapshot dari defaultUnitCost) |
+| `totalCost` | double | Tidak | Total biaya: quantityUsed × unitCostAtTime |
+
+---
+
 ## 5. System Architecture
 
 ### 5.1 Arsitektur Keseluruhan
@@ -1088,12 +1500,25 @@ lib/
 │   ├── /activities
 │   │   ├── /activities/add
 │   │   └── /activities/:id/edit
-│   ├── /salary
-│   ├── /reports
-│   └── /settings
 │       └── /settings/job-types
 │           ├── /settings/job-types/add
-│           └── /settings/job-types/:id/edit
+│    │       └── /settings/job-types/:id/edit
+│   ├── /bom
+│   │   ├── /bom/add
+│   │   └── /bom/:id
+│   │       └── /bom/:id/edit
+│   ├── /production
+│   │   ├── /production/new
+│   │   └── /production/history
+│   │       └── /production/history/:id
+│   ├── /raw-materials
+│   │   ├── /raw-materials/add
+│   │   └── /raw-materials/:id
+│   │       └── /raw-materials/:id/edit
+│   └── /finished-goods
+│       ├── /finished-goods/add
+│       └── /finished-goods/:id
+│           └── /finished-goods/:id/edit
 ```
 
 ### 5.4 State Management (Riverpod)
@@ -1353,6 +1778,57 @@ graph TD
 
 ---
 
+### 7.6 Use Case Diagram — Alur Manufaktur (BOM & Produksi)
+
+```mermaid
+graph TD
+    Admin([Admin])
+
+    Admin --> UC110[Tambah BOM Baru]
+    Admin --> UC111[Edit BOM]
+    Admin --> UC112[Hapus BOM]
+    Admin --> UC113[Lihat Daftar BOM]
+    Admin --> UC114[Lihat Detail Komponen BOM]
+
+    Admin --> UC120[Mulai Proses Produksi]
+    Admin --> UC121[Lihat Riwayat Produksi]
+    Admin --> UC122[Lihat Detail Batch Produksi]
+
+    UC120 --> |includes| UC130[Validasi Stok Bahan Baku]
+    UC130 --> |extends| UC131[Blokir Produksi - Stok Kurang]
+    UC130 --> |extends| UC132[Konfirmasi Produksi - Stok Cukup]
+    UC132 --> |includes| UC133[Kurangi Stok Bahan Baku Otomatis]
+    UC132 --> |includes| UC134[Tambah Stok Barang Jadi Otomatis]
+    UC132 --> |includes| UC135[Hitung HPP Otomatis]
+    UC132 --> |includes| UC136[Simpan ProductionRecord]
+
+    subgraph Manajemen BOM
+        UC110
+        UC111
+        UC112
+        UC113
+        UC114
+    end
+
+    subgraph Modul Produksi
+        UC120
+        UC121
+        UC122
+    end
+
+    subgraph Eksekusi Produksi Atomik
+        UC130
+        UC131
+        UC132
+        UC133
+        UC134
+        UC135
+        UC136
+    end
+```
+
+---
+
 ### 7.6 Sequence Diagram — Alur Catat Inbound
 
 ```mermaid
@@ -1417,7 +1893,79 @@ sequenceDiagram
 
 ---
 
-*Dokumen ini merupakan panduan teknis lengkap untuk pengembangan aplikasi Gudangs v1.0. Setiap perubahan persyaratan harus didiskusikan dengan tim pengembang dan Product Owner sebelum diimplementasikan.*
+---
+
+### 7.9 Sequence Diagram — Alur Produksi (Pilih BOM → Validasi Stok → Konfirmasi → Update Stok)
+
+```mermaid
+sequenceDiagram
+    actor Admin
+    participant UI as ProductionScreen
+    participant Provider as ProductionProvider
+    participant BOMRepo as BOMRepository
+    participant RawMatRepo as RawMaterialRepository
+    participant FGRepo as FinishedGoodRepository
+    participant ProdRepo as ProductionRepository
+    participant Hive as Hive DB
+
+    Admin->>UI: Pilih BOM dari dropdown
+    UI->>BOMRepo: getBOM(bomId)
+    BOMRepo->>Hive: box.get(bomId)
+    Hive-->>BOMRepo: BillOfMaterials (+ components)
+    BOMRepo-->>UI: BOM dengan daftar BOMComponent
+    UI-->>Admin: Tampilkan komponen bahan baku
+
+    Admin->>UI: Input jumlah unit yang diproduksi
+    UI->>Provider: validateStock(bomId, quantity)
+    Provider->>RawMatRepo: getStockForComponents(componentIds)
+    RawMatRepo->>Hive: box.getAll(componentIds)
+    Hive-->>RawMatRepo: List<RawMaterial>
+    RawMatRepo-->>Provider: List<RawMaterial> dengan currentStock
+
+    loop Setiap Komponen BOM
+        Provider->>Provider: kebutuhan = quantityPerUnit × quantity
+        Provider->>Provider: bandingkan kebutuhan vs currentStock
+    end
+
+    alt Stok TIDAK Mencukupi (ada komponen kurang)
+        Provider-->>UI: ValidationResult(failed, daftar kekurangan)
+        UI-->>Admin: Tampilkan pesan error detail per komponen, nonaktifkan tombol Konfirmasi
+    else Stok MENCUKUPI (semua komponen cukup)
+        Provider-->>UI: ValidationResult(passed, estimasiHPP)
+        UI-->>Admin: Tampilkan estimasi HPP, aktifkan tombol Konfirmasi Produksi
+
+        Admin->>UI: Tekan Konfirmasi Produksi
+        UI-->>Admin: Tampilkan dialog ringkasan (BOM, qty, bahan terpakai, estimasi HPP)
+        Admin->>UI: Tekan "Ya, Produksi"
+        UI->>Provider: executeProduction(bomId, finishedGoodId, quantity)
+
+        Note over Provider,Hive: Operasi Atomik Dimulai
+
+        loop Setiap Komponen BOM
+            Provider->>RawMatRepo: deductStock(rawMaterialId, quantityUsed)
+            RawMatRepo->>Hive: box.get + update currentStock -= quantityUsed
+            Hive-->>RawMatRepo: OK
+        end
+
+        Provider->>FGRepo: addStock(finishedGoodId, quantity, hpp)
+        FGRepo->>Hive: box.get + update currentStock += quantity, lastHPP = hpp
+        Hive-->>FGRepo: OK
+
+        Provider->>Provider: Hitung totalMaterialCost dan HPP
+        Provider->>ProdRepo: saveProductionRecord(record)
+        ProdRepo->>Hive: box.put(id, productionRecord)
+        Hive-->>ProdRepo: OK
+
+        Note over Provider,Hive: Operasi Atomik Selesai
+
+        Provider-->>UI: ProductionSuccess(productionRecord)
+        UI-->>Admin: Notifikasi sukses + navigasi ke Riwayat Produksi
+    end
+```
 
 ---
-**Akhir Dokumen SRS — Gudangs v1.0.0**
+
+*Dokumen ini merupakan panduan teknis lengkap untuk pengembangan aplikasi Gudangs v1.1. Setiap perubahan persyaratan harus didiskusikan dengan tim pengembang dan Product Owner sebelum diimplementasikan.*
+
+---
+**Akhir Dokumen SRS — Gudangs v1.1.0**

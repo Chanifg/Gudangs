@@ -1,6 +1,6 @@
 # PRD — Product Requirements Document
 # Aplikasi: **Gudangs**
-**Versi Dokumen:** 1.0.0  
+**Versi Dokumen:** 1.1.0  
 **Tanggal:** 2 Juli 2026  
 **Status:** Draft untuk Review  
 **Penulis:** Tim Product  
@@ -18,15 +18,29 @@
 7. [Success Metrics](#7-success-metrics)
 8. [Out of Scope](#8-out-of-scope)
 
+> **Catatan Versi 1.1.0:** Dokumen ini diperbarui untuk mencakup alur manufaktur — penambahan fitur Bill of Materials (BOM) dan Modul Produksi, serta pemisahan inventori menjadi Bahan Baku dan Barang Jadi.
+
 ---
 
 ## 1. Executive Summary
 
-**Gudangs** adalah aplikasi mobile berbasis Flutter yang dirancang untuk membantu usaha kecil dan menengah (UKM) dalam mengelola operasional gudang secara mandiri, tanpa bergantung pada koneksi internet. Aplikasi ini menyediakan solusi terintegrasi yang mencakup manajemen inventori, pencatatan barang masuk (*inbound*) dan barang keluar (*outbound*), manajemen karyawan, pencatatan aktivitas harian, estimasi gaji, serta pelaporan keuangan sederhana.
+**Gudangs** adalah aplikasi mobile berbasis Flutter yang dirancang untuk membantu usaha kecil dan menengah (UKM) dalam mengelola operasional gudang secara mandiri, tanpa bergantung pada koneksi internet. Aplikasi ini menyediakan solusi terintegrasi yang mencakup manajemen inventori, pencatatan barang masuk (*inbound*) dan barang keluar (*outbound*), **alur manufaktur** (produksi bahan baku menjadi barang jadi), manajemen karyawan, pencatatan aktivitas harian, estimasi gaji, serta pelaporan keuangan sederhana.
 
 Dengan pendekatan **offline-first** menggunakan penyimpanan lokal berbasis Hive (NoSQL), Gudangs memastikan seluruh operasional gudang dapat berjalan di lingkungan dengan konektivitas internet yang terbatas atau tidak ada sama sekali. Autentikasi menggunakan **biometrik** (fingerprint / Face ID) dengan fallback PIN memberikan kemudahan akses sekaligus keamanan data yang memadai.
 
-Gudangs bertujuan menjadi "satu pintu" untuk semua kebutuhan operasional gudang UKM — menggantikan pencatatan manual di buku atau spreadsheet yang rentan terhadap kesalahan manusia.
+**Alur Manufaktur Gudangs** mengikuti siklus tiga tahap:
+
+```
+[INBOUND] Pembelian Bahan Baku
+        ↓
+[PRODUKSI] Konversi Bahan Baku → Barang Jadi (via Bill of Materials)
+        ↓
+[OUTBOUND] Penjualan Barang Jadi
+```
+
+Inventori dipisah menjadi dua entitas: **Bahan Baku** (Raw Material) dan **Barang Jadi** (Finished Good). Setiap proses produksi menggunakan formula BOM (Bill of Materials) untuk menentukan bahan baku yang dibutuhkan, memvalidasi ketersediaan stok, dan menghitung Harga Pokok Produksi (HPP) secara otomatis.
+
+Gudangs bertujuan menjadi "satu pintu" untuk semua kebutuhan operasional gudang manufaktur UKM — menggantikan pencatatan manual di buku atau spreadsheet yang rentan terhadap kesalahan manusia.
 
 ---
 
@@ -262,6 +276,45 @@ Gudangs ditujukan untuk **satu jenis pengguna utama**: Admin/Pemilik Gudang atau
 
 ---
 
+### FR-11: Bill of Materials (BOM)
+
+| ID | Fitur | Prioritas | Keterangan |
+|----|-------|-----------|------------|
+| FR-11.1 | Tambah BOM baru untuk produk jadi | **Must** | Form: nama BOM, pilih barang jadi, daftar komponen bahan baku |
+| FR-11.2 | Edit BOM yang sudah ada | **Must** | Ubah formula/komponen BOM |
+| FR-11.3 | Hapus BOM | **Must** | Dengan konfirmasi; tidak dapat dihapus jika ada produksi aktif |
+| FR-11.4 | Lihat daftar BOM | **Must** | List dengan nama produk jadi dan jumlah komponen |
+| FR-11.5 | Tambah/hapus komponen bahan baku dalam BOM | **Must** | Setiap komponen: pilih bahan baku + qty per unit produk jadi |
+| FR-11.6 | 1 BOM hanya untuk 1 barang jadi | **Must** | Relasi one-to-one antara BOM dan FinishedGood |
+
+---
+
+### FR-12: Modul Produksi
+
+| ID | Fitur | Prioritas | Keterangan |
+|----|-------|-----------|------------|
+| FR-12.1 | Jalankan proses produksi | **Must** | Pilih BOM, input jumlah unit yang diproduksi |
+| FR-12.2 | Validasi stok bahan baku sebelum produksi | **Must** | Sistem memeriksa ketersediaan semua komponen BOM |
+| FR-12.3 | Blokir produksi jika stok tidak cukup | **Must** | Tampilkan pesan detail: bahan mana yang kurang berapa |
+| FR-12.4 | Pengurangan stok bahan baku otomatis | **Must** | Saat konfirmasi produksi, stok bahan baku berkurang |
+| FR-12.5 | Penambahan stok barang jadi otomatis | **Must** | Saat konfirmasi produksi, stok barang jadi bertambah |
+| FR-12.6 | Kalkulasi HPP otomatis per batch | **Must** | HPP = total biaya bahan baku terpakai ÷ jumlah unit diproduksi |
+| FR-12.7 | Riwayat produksi tersimpan | **Must** | Tanggal, produk, jumlah, bahan terpakai, HPP per batch |
+| FR-12.8 | Catatan produksi (opsional) | **Should** | Field keterangan/catatan per batch produksi |
+
+---
+
+### FR-13: Inventori Terpisah (Bahan Baku & Barang Jadi)
+
+| ID | Fitur | Prioritas | Keterangan |
+|----|-------|-----------|------------|
+| FR-13.1 | CRUD Bahan Baku (RawMaterial) | **Must** | Entitas terpisah dari barang jadi |
+| FR-13.2 | CRUD Barang Jadi (FinishedGood) | **Must** | Entitas terpisah dari bahan baku, memiliki field HPP |
+| FR-13.3 | Inbound hanya untuk Bahan Baku | **Must** | Form inbound hanya memilih dari daftar RawMaterial |
+| FR-13.4 | Outbound hanya untuk Barang Jadi | **Must** | Form outbound hanya memilih dari daftar FinishedGood |
+
+---
+
 ## 5. User Stories
 
 ### Autentikasi
@@ -338,6 +391,26 @@ Gudangs ditujukan untuk **satu jenis pengguna utama**: Admin/Pemilik Gudang atau
 
 > **US-027** — *As an admin, I want to export employee wage reports per period to PDF, so that the payroll summary can be used as a payment reference.*
 
+### Bill of Materials (BOM)
+
+> **US-028** — *Sebagai admin, saya ingin membuat Bill of Materials (BOM) untuk setiap produk jadi dengan mendefinisikan daftar bahan baku dan jumlah yang dibutuhkan per unit, agar formula produksi terdokumentasi secara digital dan dapat digunakan berulang kali.*
+
+> **US-029** — *Sebagai admin, saya ingin mengedit BOM yang sudah ada (menambah, mengubah, atau menghapus komponen), agar formula produksi selalu akurat sesuai kondisi terkini.*
+
+> **US-030** — *Sebagai admin, saya ingin melihat daftar semua BOM beserta komponen bahan bakunya, agar saya dapat dengan mudah meninjau formula produksi yang tersedia sebelum memulai produksi.*
+
+### Modul Produksi
+
+> **US-031** — *Sebagai admin, saya ingin memilih BOM dan menentukan jumlah unit yang akan diproduksi, lalu sistem secara otomatis memvalidasi apakah stok bahan baku mencukupi, agar saya tahu sebelum produksi dimulai apakah bahan tersedia.*
+
+> **US-032** — *Sebagai admin, saya ingin sistem memblokir proses produksi dan menampilkan pesan detail tentang bahan baku mana yang kurang dan berapa jumlah kekurangannya, agar saya dapat segera melakukan pembelian bahan baku yang diperlukan.*
+
+> **US-033** — *Sebagai admin, saya ingin mengkonfirmasi produksi sehingga stok bahan baku otomatis berkurang dan stok barang jadi otomatis bertambah sesuai jumlah produksi, agar inventori selalu akurat tanpa input manual terpisah.*
+
+> **US-034** — *Sebagai admin, saya ingin sistem menghitung HPP (Harga Pokok Produksi) secara otomatis per batch produksi berdasarkan total biaya bahan baku yang digunakan, agar saya mengetahui biaya produksi aktual dan dapat menentukan harga jual yang tepat.*
+
+> **US-035** — *Sebagai admin, saya ingin melihat riwayat produksi lengkap (tanggal, produk, jumlah, bahan terpakai, dan HPP per batch), agar saya dapat melacak histori produksi dan menganalisis tren biaya produksi dari waktu ke waktu.*
+
 ---
 
 ## 6. Non-Functional Requirements
@@ -379,7 +452,16 @@ Gudangs ditujukan untuk **satu jenis pengguna utama**: Admin/Pemilik Gudang atau
 | NFR-C-03 | Mendukung layar 4,7" hingga 7" (smartphone) |
 | NFR-C-04 | Responsif terhadap orientasi portrait (landscape opsional) |
 
-### 6.5 Usability
+### 6.5 Produksi & Validasi Stok
+
+| NFR-ID | Persyaratan | Target |
+|--------|-------------|--------|
+| NFR-PRD-01 | Waktu validasi stok bahan baku sebelum produksi | <= 500 ms untuk BOM dengan hingga 50 komponen |
+| NFR-PRD-02 | Kalkulasi HPP harus akurat hingga 2 desimal | Tidak ada pembulatan yang menyebabkan selisih > Rp 1 |
+| NFR-PRD-03 | Atomisitas operasi produksi | Pengurangan stok bahan baku dan penambahan stok barang jadi harus terjadi dalam satu operasi atomik; tidak boleh ada partial update |
+| NFR-PRD-04 | Pesan error validasi stok harus informatif | Menyebutkan nama bahan baku, stok tersedia, dan kekurangan untuk setiap komponen yang tidak mencukupi |
+
+### 6.6 Usability
 
 | NFR-ID | Persyaratan |
 |--------|-------------|
@@ -388,7 +470,7 @@ Gudangs ditujukan untuk **satu jenis pengguna utama**: Admin/Pemilik Gudang atau
 | NFR-U-03 | Navigasi utama dapat dicapai dalam maksimal 3 tap dari halaman manapun |
 | NFR-U-04 | Tema Light Mode dengan aksen hijau yang konsisten di seluruh aplikasi |
 
-### 6.6 Maintainability
+### 6.7 Maintainability
 
 | NFR-ID | Persyaratan |
 |--------|-------------|
@@ -444,10 +526,12 @@ Fitur dan kapabilitas berikut secara eksplisit **tidak termasuk** dalam lingkup 
 | 8 | Barcode/QR Scanner untuk produk | Bisa masuk v2 jika ada permintaan pengguna. |
 | 9 | Dashboard web/desktop | Platform target adalah mobile saja. |
 | 10 | Payroll resmi / integrasi penggajian | Gudangs hanya menyediakan estimasi gaji, bukan sistem penggajian terintegrasi. |
+| 11 | Multi-level BOM (BOM di dalam BOM) | Versi ini hanya mendukung BOM satu tingkat (flat BOM). BOM hierarkis di luar scope v1. |
+| 12 | Perencanaan produksi / MRP | Sistem tidak membuat jadwal atau rekomendasi produksi otomatis. |
 
 ---
 
 *Dokumen ini dibuat berdasarkan spesifikasi awal aplikasi Gudangs. Perubahan pada dokumen ini harus melalui review dan persetujuan Product Owner.*
 
 ---
-**Akhir Dokumen PRD — Gudangs v1.0.0**
+**Akhir Dokumen PRD — Gudangs v1.1.0**
