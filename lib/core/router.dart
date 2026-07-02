@@ -15,6 +15,7 @@ import '../screens/activities/activity_list_screen.dart';
 import '../screens/activities/activity_form_screen.dart';
 import '../screens/salary/salary_screen.dart';
 import '../screens/reports/reports_screen.dart';
+import '../screens/reports/stats_screen.dart';
 import '../screens/settings/settings_screen.dart';
 import '../screens/settings/job_type_form_screen.dart';
 import '../services/auth_service.dart';
@@ -161,6 +162,11 @@ final router = GoRouter(
               path: 'reports',
               parentNavigatorKey: rootNavigatorKey,
               builder: (context, state) => const ReportsScreen(),
+            ),
+            GoRoute(
+              path: 'stats',
+              parentNavigatorKey: rootNavigatorKey,
+              builder: (context, state) => const StatsScreen(),
             ),
             GoRoute(
               path: 'job-types/add',

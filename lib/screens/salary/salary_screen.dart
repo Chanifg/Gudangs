@@ -1,6 +1,7 @@
 import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../providers/salary_provider.dart';
 import '../../core/formatters.dart';
 import '../../models/employee.dart';
@@ -492,13 +493,26 @@ class _EmployeeSalaryCardState extends State<EmployeeSalaryCard> {
                                 children: [
                                   Expanded(
                                     flex: 3,
-                                    child: Text(
-                                      job.jobTypeName,
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w500,
-                                        color: Color(0xFF0B1C30),
-                                      ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          job.jobTypeName,
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w500,
+                                            color: Color(0xFF0B1C30),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Tgl: ${job.dates.map((d) => DateFormat('d MMM', 'id_ID').format(d)).toSet().join(", ")}',
+                                          style: const TextStyle(
+                                            fontSize: 10,
+                                            color: Color(0xFF565E74),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                   Expanded(

@@ -186,6 +186,15 @@ class SettingsScreen extends ConsumerWidget {
                 child: Column(
                   children: [
                     ListTile(
+                      leading: Icon(Icons.bar_chart_outlined, color: colorScheme.primary),
+                      title: const Text('Statistik Operasional'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        context.push('/more/stats');
+                      },
+                    ),
+                    const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                    ListTile(
                       leading: Icon(Icons.payments_outlined, color: colorScheme.primary),
                       title: const Text('Estimasi Gaji Karyawan'),
                       trailing: const Icon(Icons.chevron_right),

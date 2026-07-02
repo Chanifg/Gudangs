@@ -9,6 +9,7 @@ class JobTypeWageSummary {
   final double totalUnits;
   final double ratePerUnit;
   final double subtotal;
+  final List<DateTime> dates;
 
   JobTypeWageSummary({
     required this.jobTypeId,
@@ -16,6 +17,7 @@ class JobTypeWageSummary {
     required this.totalUnits,
     required this.ratePerUnit,
     required this.subtotal,
+    required this.dates,
   });
 }
 
@@ -128,12 +130,17 @@ class SalaryNotifier extends StateNotifier<SalaryState> {
         final double totalUnits = acts.fold(0.0, (sum, act) => sum + act.units);
         final double subtotal = acts.fold(0.0, (sum, act) => sum + act.estimatedWage);
 
+        // Collect and sort dates
+        final List<DateTime> dates = acts.map<DateTime>((act) => act.date as DateTime).toList();
+        dates.sort((a, b) => a.compareTo(b));
+
         jobSummaries.add(JobTypeWageSummary(
           jobTypeId: jobTypeId,
           jobTypeName: firstAct.jobTypeName,
           totalUnits: totalUnits,
           ratePerUnit: firstAct.ratePerUnit, // Snapshot rate from activity records
           subtotal: subtotal,
+          dates: dates,
         ));
         
         empTotal += subtotal;

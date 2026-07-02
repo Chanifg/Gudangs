@@ -36,6 +36,181 @@ class MainShell extends StatelessWidget {
     }
   }
 
+  void _showQuickActionsBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent, // transparent to show rounded corners
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Drag handle
+              Center(
+                child: Container(
+                  width: 48,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE2E8F0),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Aksi Cepat Gudang',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0B1C30), // darkNavy
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Pilih tindakan cepat yang ingin Anda lakukan',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF565E74), // slateGrey
+                ),
+              ),
+              const SizedBox(height: 16),
+              
+              // Action items
+              _buildActionItem(
+                context: context,
+                icon: Icons.engineering_outlined,
+                iconColor: const Color(0xFF006E2F), // primaryGreen
+                title: 'Catat Aktivitas Kerja',
+                description: 'Catat pekerjaan harian karyawan untuk kalkulasi upah',
+                route: '/transactions/activity/add',
+              ),
+              _buildActionItem(
+                context: context,
+                icon: Icons.arrow_downward,
+                iconColor: const Color(0xFF22C55E), // emeraldGreen
+                title: 'Barang Masuk (Inbound)',
+                description: 'Catat stok barang yang baru masuk ke gudang',
+                route: '/transactions/inbound/add',
+              ),
+              _buildActionItem(
+                context: context,
+                icon: Icons.arrow_upward,
+                iconColor: const Color(0xFFBA1A1A), // errorRed
+                title: 'Barang Keluar (Outbound)',
+                description: 'Catat pengiriman barang keluar dari gudang',
+                route: '/transactions/outbound/add',
+              ),
+              _buildActionItem(
+                context: context,
+                icon: Icons.inventory_2_outlined,
+                iconColor: const Color(0xFF565E74), // slateGrey
+                title: 'Tambah Produk Baru',
+                description: 'Daftarkan item baru ke sistem inventori',
+                route: '/inventory/add',
+              ),
+              _buildActionItem(
+                context: context,
+                icon: Icons.person_add_outlined,
+                iconColor: const Color(0xFF565E74), // slateGrey
+                title: 'Tambah Karyawan Baru',
+                description: 'Daftarkan data karyawan baru ke sistem',
+                route: '/employees/add',
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildActionItem({
+    required BuildContext context,
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String description,
+    required String route,
+  }) {
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 10),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: Color(0xFFE2E8F0)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () {
+          Navigator.pop(context); // close bottom sheet
+          context.push(route);
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: iconColor.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: iconColor, size: 22),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF0B1C30), // darkNavy
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      description,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF565E74), // slateGrey
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: Color(0xFF565E74), size: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFAB(BuildContext context) {
+    return FloatingActionButton(
+      onPressed: () => _showQuickActionsBottomSheet(context),
+      backgroundColor: const Color(0xFF006E2F), // primaryGreen
+      foregroundColor: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      tooltip: 'Aksi Cepat',
+      child: const Icon(Icons.add),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -78,6 +253,7 @@ class MainShell extends StatelessWidget {
                                 color: Theme.of(context).colorScheme.primary,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 1.2,
+                                // Corrected named font weight issue
                               ),
                         ),
                       ],
@@ -144,6 +320,7 @@ class MainShell extends StatelessWidget {
             ),
           ],
         ),
+        floatingActionButton: _buildFAB(context),
       );
     }
 
@@ -198,6 +375,7 @@ class MainShell extends StatelessWidget {
           ),
         ),
       ),
+      floatingActionButton: _buildFAB(context),
     );
   }
 
