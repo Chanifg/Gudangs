@@ -8,6 +8,10 @@ import '../models/employee.dart';
 import '../models/activity_record.dart';
 import '../models/job_type.dart';
 import '../models/app_settings.dart';
+import '../models/raw_material.dart';
+import '../models/finished_good.dart';
+import '../models/bill_of_materials.dart';
+import '../models/production_record.dart';
 
 class DatabaseService {
   static const _secureStorage = FlutterSecureStorage();
@@ -20,6 +24,11 @@ class DatabaseService {
   static late Box<ActivityRecord> activityBox;
   static late Box<JobType> jobTypesBox;
   static late Box<AppSettings> settingsBox;
+  
+  static late Box<RawMaterial> rawMaterialsBox;
+  static late Box<FinishedGood> finishedGoodsBox;
+  static late Box<BillOfMaterials> bomBox;
+  static late Box<ProductionRecord> productionBox;
 
   static Future<void> init() async {
     // 1. Initialize Hive for Flutter
@@ -34,6 +43,12 @@ class DatabaseService {
     Hive.registerAdapter(ActivityRecordAdapter());
     Hive.registerAdapter(JobTypeAdapter());
     Hive.registerAdapter(AppSettingsAdapter());
+    Hive.registerAdapter(RawMaterialAdapter());
+    Hive.registerAdapter(FinishedGoodAdapter());
+    Hive.registerAdapter(BillOfMaterialsAdapter());
+    Hive.registerAdapter(BOMComponentAdapter());
+    Hive.registerAdapter(ProductionRecordAdapter());
+    Hive.registerAdapter(MaterialUsageAdapter());
 
     // 3. Get or generate encryption key
     final encryptionKey = await _getOrCreateEncryptionKey();
@@ -67,6 +82,22 @@ class DatabaseService {
       'app_settings',
       encryptionCipher: HiveAesCipher(encryptionKey),
     );
+    rawMaterialsBox = await Hive.openBox<RawMaterial>(
+      'raw_materials',
+      encryptionCipher: HiveAesCipher(encryptionKey),
+    );
+    finishedGoodsBox = await Hive.openBox<FinishedGood>(
+      'finished_goods',
+      encryptionCipher: HiveAesCipher(encryptionKey),
+    );
+    bomBox = await Hive.openBox<BillOfMaterials>(
+      'bill_of_materials',
+      encryptionCipher: HiveAesCipher(encryptionKey),
+    );
+    productionBox = await Hive.openBox<ProductionRecord>(
+      'production_records',
+      encryptionCipher: HiveAesCipher(encryptionKey),
+    );
 
     // Initialize AppSettings if empty
     if (settingsBox.isEmpty) {
@@ -98,6 +129,10 @@ class DatabaseService {
     await activityBox.clear();
     await jobTypesBox.clear();
     await settingsBox.clear();
+    await rawMaterialsBox.clear();
+    await finishedGoodsBox.clear();
+    await bomBox.clear();
+    await productionBox.clear();
     await settingsBox.put('settings', AppSettings(isBiometricEnabled: true));
   }
 }

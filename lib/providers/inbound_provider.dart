@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/inbound_record.dart';
 import '../services/database_service.dart';
-import 'inventory_provider.dart';
+import 'raw_material_provider.dart';
 
 class InboundState {
   final List<InboundRecord> records;
@@ -92,9 +92,9 @@ class InboundNotifier extends StateNotifier<InboundState> {
       return false;
     }
 
-    final product = DatabaseService.productsBox.get(productId);
+    final product = DatabaseService.rawMaterialsBox.get(productId);
     if (product == null || product.isDeleted) {
-      state = state.copyWith(errorMessage: 'Produk tidak ditemukan');
+      state = state.copyWith(errorMessage: 'Bahan baku tidak ditemukan');
       return false;
     }
 
@@ -117,14 +117,14 @@ class InboundNotifier extends StateNotifier<InboundState> {
     // 1. Save Inbound Record
     await DatabaseService.inboundBox.put(id, record);
 
-    // 2. Adjust Product Stock
+    // 2. Adjust Raw Material Stock
     product.currentStock += quantity;
     product.updatedAt = DateTime.now();
     await product.save();
 
     // 3. Refresh Providers
     loadInboundRecords();
-    _ref.read(inventoryProvider.notifier).loadProducts();
+    _ref.read(rawMaterialProvider.notifier).loadRawMaterials();
 
     return true;
   }
@@ -148,9 +148,9 @@ class InboundNotifier extends StateNotifier<InboundState> {
       return false;
     }
 
-    final product = DatabaseService.productsBox.get(record.productId);
+    final product = DatabaseService.rawMaterialsBox.get(record.productId);
     if (product == null || product.isDeleted) {
-      state = state.copyWith(errorMessage: 'Produk tidak ditemukan');
+      state = state.copyWith(errorMessage: 'Bahan baku tidak ditemukan');
       return false;
     }
 
@@ -180,7 +180,7 @@ class InboundNotifier extends StateNotifier<InboundState> {
 
     // 3. Refresh Providers
     loadInboundRecords();
-    _ref.read(inventoryProvider.notifier).loadProducts();
+    _ref.read(rawMaterialProvider.notifier).loadRawMaterials();
 
     return true;
   }

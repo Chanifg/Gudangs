@@ -1,8 +1,6 @@
-import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:intl/intl.dart';
 import '../../services/database_service.dart';
 import '../../core/formatters.dart';
 import '../../providers/inbound_provider.dart';
@@ -222,11 +220,11 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
 
             if (useMockup) ...[
               Card(
-                color: colorScheme.primary.withOpacity(0.05),
+                color: colorScheme.primary.withValues(alpha: 0.05),
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: colorScheme.primary.withOpacity(0.1)),
+                  side: BorderSide(color: colorScheme.primary.withValues(alpha: 0.1)),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(12.0),
@@ -263,7 +261,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                       border: Border.all(color: const Color(0xFFE2E8F0)),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.02),
+                          color: Colors.black.withValues(alpha: 0.02),
                           blurRadius: 6,
                           offset: const Offset(0, 2),
                         ),
@@ -603,7 +601,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             boxShadow: isActive
                 ? [
                     BoxShadow(
-                      color: const Color(0xFF22C55E).withOpacity(0.2),
+                      color: const Color(0xFF22C55E).withValues(alpha: 0.2),
                       blurRadius: 6,
                       offset: const Offset(0, 2),
                     ),

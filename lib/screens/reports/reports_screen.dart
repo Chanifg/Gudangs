@@ -247,7 +247,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 children: [
                   // Help instruction card
                   Card(
-                    color: colorScheme.primary.withOpacity(0.05),
+                    color: colorScheme.primary.withValues(alpha: 0.05),
                     child: const Padding(
                       padding: EdgeInsets.all(16.0),
                       child: Row(
@@ -273,7 +273,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
-                    value: _selectedReportType,
+                    initialValue: _selectedReportType,
                     items: _reportTypes.map((type) {
                       return DropdownMenuItem<String>(
                         value: type['value'],

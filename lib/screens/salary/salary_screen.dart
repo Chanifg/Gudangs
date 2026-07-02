@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../providers/salary_provider.dart';
 import '../../core/formatters.dart';
-import '../../models/employee.dart';
 
 class SalaryScreen extends ConsumerWidget {
   const SalaryScreen({super.key});
@@ -27,7 +26,6 @@ class SalaryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final salaryState = ref.watch(salaryProvider);
-    final colorScheme = Theme.of(context).colorScheme;
 
     final startDateStr = Formatters.formatDate(salaryState.dateRange.start);
     final endDateStr = Formatters.formatDate(salaryState.dateRange.end);
@@ -89,7 +87,7 @@ class SalaryScreen extends ConsumerWidget {
                       border: Border.all(color: const Color(0xFFE2E8F0)),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
+                          color: Colors.black.withValues(alpha: 0.04),
                           blurRadius: 8,
                           offset: const Offset(0, 2),
                         ),
@@ -139,7 +137,7 @@ class SalaryScreen extends ConsumerWidget {
                         border: Border.all(color: const Color(0xFFE2E8F0)),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.04),
+                            color: Colors.black.withValues(alpha: 0.04),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -155,7 +153,7 @@ class SalaryScreen extends ConsumerWidget {
                               width: 64,
                               height: 64,
                               decoration: BoxDecoration(
-                                color: const Color(0xFF22C55E).withOpacity(0.15),
+                                color: const Color(0xFF22C55E).withValues(alpha: 0.15),
                                 shape: BoxShape.circle,
                               ),
                               child: BackdropFilter(
@@ -309,7 +307,7 @@ class _EmployeeSalaryCardState extends State<EmployeeSalaryCard> {
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),

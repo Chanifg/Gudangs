@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/outbound_record.dart';
 import '../services/database_service.dart';
-import 'inventory_provider.dart';
+import 'finished_good_provider.dart';
 
 class OutboundState {
   final List<OutboundRecord> records;
@@ -123,9 +123,9 @@ class OutboundNotifier extends StateNotifier<OutboundState> {
       return false;
     }
 
-    final product = DatabaseService.productsBox.get(productId);
+    final product = DatabaseService.finishedGoodsBox.get(productId);
     if (product == null || product.isDeleted) {
-      state = state.copyWith(errorMessage: 'Produk tidak ditemukan');
+      state = state.copyWith(errorMessage: 'Barang jadi tidak ditemukan');
       return false;
     }
 
@@ -160,7 +160,7 @@ class OutboundNotifier extends StateNotifier<OutboundState> {
     // 1. Save Outbound Record
     await DatabaseService.outboundBox.put(id, record);
 
-    // 2. Reduce Product Stock (only if status is not dibatalkan)
+    // 2. Reduce Finished Good Stock (only if status is not dibatalkan)
     if (status != OutboundStatus.dibatalkan) {
       product.currentStock -= quantity;
       product.updatedAt = now;
@@ -169,7 +169,7 @@ class OutboundNotifier extends StateNotifier<OutboundState> {
 
     // 3. Refresh Providers
     loadOutboundRecords();
-    _ref.read(inventoryProvider.notifier).loadProducts();
+    _ref.read(finishedGoodProvider.notifier).loadFinishedGoods();
 
     return true;
   }
@@ -184,9 +184,9 @@ class OutboundNotifier extends StateNotifier<OutboundState> {
 
     if (record.status == newStatus) return true;
 
-    final product = DatabaseService.productsBox.get(record.productId);
+    final product = DatabaseService.finishedGoodsBox.get(record.productId);
     if (product == null || product.isDeleted) {
-      state = state.copyWith(errorMessage: 'Produk tidak ditemukan');
+      state = state.copyWith(errorMessage: 'Barang jadi tidak ditemukan');
       return false;
     }
 
@@ -218,7 +218,7 @@ class OutboundNotifier extends StateNotifier<OutboundState> {
 
     // Refresh
     loadOutboundRecords();
-    _ref.read(inventoryProvider.notifier).loadProducts();
+    _ref.read(finishedGoodProvider.notifier).loadFinishedGoods();
     return true;
   }
 
@@ -242,9 +242,9 @@ class OutboundNotifier extends StateNotifier<OutboundState> {
       return false;
     }
 
-    final product = DatabaseService.productsBox.get(record.productId);
+    final product = DatabaseService.finishedGoodsBox.get(record.productId);
     if (product == null || product.isDeleted) {
-      state = state.copyWith(errorMessage: 'Produk tidak ditemukan');
+      state = state.copyWith(errorMessage: 'Barang jadi tidak ditemukan');
       return false;
     }
 
@@ -279,7 +279,7 @@ class OutboundNotifier extends StateNotifier<OutboundState> {
 
     // Refresh
     loadOutboundRecords();
-    _ref.read(inventoryProvider.notifier).loadProducts();
+    _ref.read(finishedGoodProvider.notifier).loadFinishedGoods();
 
     return true;
   }

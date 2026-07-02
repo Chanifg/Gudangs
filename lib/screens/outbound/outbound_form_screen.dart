@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../providers/inventory_provider.dart';
+import '../../providers/finished_good_provider.dart';
 import '../../providers/outbound_provider.dart';
 import '../../core/formatters.dart';
 import '../../models/outbound_record.dart';
@@ -32,6 +32,9 @@ class _OutboundFormScreenState extends ConsumerState<OutboundFormScreen> {
     super.initState();
     _qtyController.addListener(_updateTotalValue);
     _priceController.addListener(_updateTotalValue);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(finishedGoodProvider.notifier).loadFinishedGoods();
+    });
   }
 
   @override
@@ -55,7 +58,7 @@ class _OutboundFormScreenState extends ConsumerState<OutboundFormScreen> {
     if (productId == null) return;
     
     // Find selected product to show stock limits
-    final products = ref.read(inventoryProvider).products;
+    final products = ref.read(finishedGoodProvider).finishedGoods;
     final product = products.firstWhere((p) => p.id == productId);
 
     setState(() {
@@ -107,11 +110,11 @@ class _OutboundFormScreenState extends ConsumerState<OutboundFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final inventoryState = ref.watch(inventoryProvider);
+    final finishedGoodState = ref.watch(finishedGoodProvider);
     final outboundState = ref.watch(outboundProvider);
     final colorScheme = Theme.of(context).colorScheme;
 
-    final activeProducts = inventoryState.products;
+    final activeProducts = finishedGoodState.finishedGoods;
 
     return Scaffold(
       appBar: AppBar(
@@ -147,7 +150,7 @@ class _OutboundFormScreenState extends ConsumerState<OutboundFormScreen> {
 
                 // Product Dropdown
                 DropdownButtonFormField<String>(
-                  value: _selectedProductId,
+                  initialValue: _selectedProductId,
                   decoration: const InputDecoration(
                     labelText: 'Pilih Produk *',
                   ),
@@ -257,7 +260,7 @@ class _OutboundFormScreenState extends ConsumerState<OutboundFormScreen> {
 
                 // Status Dropdown
                 DropdownButtonFormField<OutboundStatus>(
-                  value: _selectedStatus,
+                  initialValue: _selectedStatus,
                   decoration: const InputDecoration(
                     labelText: 'Status Pengiriman *',
                   ),
@@ -289,7 +292,7 @@ class _OutboundFormScreenState extends ConsumerState<OutboundFormScreen> {
 
                 // Real-time Value Card
                 Card(
-                  color: colorScheme.surfaceVariant.withOpacity(0.3),
+                  color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Row(

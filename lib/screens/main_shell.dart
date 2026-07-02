@@ -42,92 +42,172 @@ class MainShell extends StatelessWidget {
       backgroundColor: Colors.transparent, // transparent to show rounded corners
       isScrollControlled: true,
       builder: (context) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
-          ),
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Drag handle
-              Center(
-                child: Container(
-                  width: 48,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE2E8F0),
-                    borderRadius: BorderRadius.circular(2),
+        return DraggableScrollableSheet(
+          initialChildSize: 0.75,
+          maxChildSize: 0.9,
+          minChildSize: 0.5,
+          expand: false,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+              ),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Drag handle
+                  Center(
+                    child: Container(
+                      width: 48,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE2E8F0),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Menu Operasional Gudang',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0B1C30), // darkNavy
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Pilih tindakan cepat yang ingin Anda lakukan',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF565E74), // slateGrey
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  Expanded(
+                    child: ListView(
+                      controller: scrollController,
+                      children: [
+                        const Text(
+                          'PRODUKSI & AKTIVITAS',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF565E74), letterSpacing: 0.5),
+                        ),
+                        const SizedBox(height: 8),
+                        _buildActionItem(
+                          context: context,
+                          icon: Icons.precision_manufacturing_outlined,
+                          iconColor: const Color(0xFF006E2F), // primaryGreen
+                          title: 'Eksekusi Produksi (BOM)',
+                          description: 'Proses bahan baku mentah menjadi barang jadi',
+                          route: '/production',
+                        ),
+                        _buildActionItem(
+                          context: context,
+                          icon: Icons.engineering_outlined,
+                          iconColor: const Color(0xFF006E2F), // primaryGreen
+                          title: 'Catat Aktivitas Kerja',
+                          description: 'Catat pekerjaan harian karyawan untuk upah',
+                          route: '/transactions/activity/add',
+                        ),
+                        _buildActionItem(
+                          context: context,
+                          icon: Icons.arrow_downward,
+                          iconColor: const Color(0xFF22C55E), // emeraldGreen
+                          title: 'Barang Masuk (Inbound)',
+                          description: 'Beli dan tambah stok bahan baku mentah',
+                          route: '/transactions/inbound/add',
+                        ),
+                        _buildActionItem(
+                          context: context,
+                          icon: Icons.arrow_upward,
+                          iconColor: const Color(0xFFBA1A1A), // errorRed
+                          title: 'Barang Keluar (Outbound)',
+                          description: 'Jual dan kurangi stok barang jadi',
+                          route: '/transactions/outbound/add',
+                        ),
+                        
+                        const SizedBox(height: 16),
+                        const Text(
+                          'REGISTRASI DATA BARU',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF565E74), letterSpacing: 0.5),
+                        ),
+                        const SizedBox(height: 8),
+                        _buildActionItem(
+                          context: context,
+                          icon: Icons.playlist_add_outlined,
+                          iconColor: const Color(0xFF565E74),
+                          title: 'Tambah Bahan Baku',
+                          description: 'Daftarkan tipe bahan baku baru',
+                          route: '/inventory/raw-materials/add',
+                        ),
+                        _buildActionItem(
+                          context: context,
+                          icon: Icons.library_add_outlined,
+                          iconColor: const Color(0xFF565E74),
+                          title: 'Tambah Barang Jadi',
+                          description: 'Daftarkan produk barang jadi baru',
+                          route: '/inventory/finished-goods/add',
+                        ),
+                        _buildActionItem(
+                          context: context,
+                          icon: Icons.person_add_outlined,
+                          iconColor: const Color(0xFF565E74),
+                          title: 'Tambah Karyawan Baru',
+                          description: 'Daftarkan data karyawan baru ke sistem',
+                          route: '/employees/add',
+                        ),
+                        
+                        const SizedBox(height: 16),
+                        const Text(
+                          'RIWAYAT & LAPORAN',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF565E74), letterSpacing: 0.5),
+                        ),
+                        const SizedBox(height: 8),
+                        _buildActionItem(
+                          context: context,
+                          icon: Icons.history,
+                          iconColor: const Color(0xFF0B1C30),
+                          title: 'Riwayat Produksi',
+                          description: 'Log proses perakitan barang & HPP',
+                          route: '/production/history',
+                        ),
+                        _buildActionItem(
+                          context: context,
+                          icon: Icons.receipt_long_outlined,
+                          iconColor: const Color(0xFF006E2F),
+                          title: 'Daftar Barang Masuk',
+                          description: 'Lihat riwayat pembelian bahan baku',
+                          route: '/transactions/inbound',
+                        ),
+                        _buildActionItem(
+                          context: context,
+                          icon: Icons.assignment_turned_in_outlined,
+                          iconColor: const Color(0xFFBA1A1A),
+                          title: 'Daftar Barang Keluar',
+                          description: 'Lihat log pengiriman & status jual',
+                          route: '/transactions/outbound',
+                        ),
+                        _buildActionItem(
+                          context: context,
+                          icon: Icons.receipt_outlined,
+                          iconColor: const Color(0xFF565E74),
+                          title: 'Daftar Formula BOM',
+                          description: 'Kelola resep komponen barang jadi',
+                          route: '/inventory/bom',
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'Aksi Cepat Gudang',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF0B1C30), // darkNavy
-                ),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Pilih tindakan cepat yang ingin Anda lakukan',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF565E74), // slateGrey
-                ),
-              ),
-              const SizedBox(height: 16),
-              
-              // Action items
-              _buildActionItem(
-                context: context,
-                icon: Icons.engineering_outlined,
-                iconColor: const Color(0xFF006E2F), // primaryGreen
-                title: 'Catat Aktivitas Kerja',
-                description: 'Catat pekerjaan harian karyawan untuk kalkulasi upah',
-                route: '/transactions/activity/add',
-              ),
-              _buildActionItem(
-                context: context,
-                icon: Icons.arrow_downward,
-                iconColor: const Color(0xFF22C55E), // emeraldGreen
-                title: 'Barang Masuk (Inbound)',
-                description: 'Catat stok barang yang baru masuk ke gudang',
-                route: '/transactions/inbound/add',
-              ),
-              _buildActionItem(
-                context: context,
-                icon: Icons.arrow_upward,
-                iconColor: const Color(0xFFBA1A1A), // errorRed
-                title: 'Barang Keluar (Outbound)',
-                description: 'Catat pengiriman barang keluar dari gudang',
-                route: '/transactions/outbound/add',
-              ),
-              _buildActionItem(
-                context: context,
-                icon: Icons.inventory_2_outlined,
-                iconColor: const Color(0xFF565E74), // slateGrey
-                title: 'Tambah Produk Baru',
-                description: 'Daftarkan item baru ke sistem inventori',
-                route: '/inventory/add',
-              ),
-              _buildActionItem(
-                context: context,
-                icon: Icons.person_add_outlined,
-                iconColor: const Color(0xFF565E74), // slateGrey
-                title: 'Tambah Karyawan Baru',
-                description: 'Daftarkan data karyawan baru ke sistem',
-                route: '/employees/add',
-              ),
-            ],
-          ),
+            );
+          }
         );
       },
     );
@@ -161,7 +241,7 @@ class MainShell extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.1),
+                  color: iconColor.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, color: iconColor, size: 22),
@@ -228,7 +308,7 @@ class MainShell extends StatelessWidget {
                 color: Colors.white,
                 border: Border(
                   right: BorderSide(
-                    color: Theme.of(context).colorScheme.outlineVariant.withOpacity(0.3),
+                    color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
                     width: 1,
                   ),
                 ),
@@ -253,7 +333,6 @@ class MainShell extends StatelessWidget {
                                 color: Theme.of(context).colorScheme.primary,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 1.2,
-                                // Corrected named font weight issue
                               ),
                         ),
                       ],
@@ -305,7 +384,7 @@ class MainShell extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.all(16),
                     child: Text(
-                      'Gudangs v1.0.0\nOffline-First',
+                      'Gudangs v1.1.0\nManufacturing & BOM',
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
@@ -331,7 +410,7 @@ class MainShell extends StatelessWidget {
         decoration: BoxDecoration(
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha: 0.06),
               blurRadius: 12,
               offset: const Offset(0, -4),
             ),
@@ -402,7 +481,7 @@ class MainShell extends StatelessWidget {
           ),
         ),
         selected: isSelected,
-        selectedTileColor: colorScheme.primary.withOpacity(0.1),
+        selectedTileColor: colorScheme.primary.withValues(alpha: 0.1),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
         ),

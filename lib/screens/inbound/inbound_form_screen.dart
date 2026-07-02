@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../providers/inventory_provider.dart';
+import '../../providers/raw_material_provider.dart';
 import '../../providers/inbound_provider.dart';
 import '../../core/formatters.dart';
 
@@ -27,6 +27,9 @@ class _InboundFormScreenState extends ConsumerState<InboundFormScreen> {
     super.initState();
     _qtyController.addListener(_updateTotalCost);
     _priceController.addListener(_updateTotalCost);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(rawMaterialProvider.notifier).loadRawMaterials();
+    });
   }
 
   @override
@@ -85,11 +88,11 @@ class _InboundFormScreenState extends ConsumerState<InboundFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final inventoryState = ref.watch(inventoryProvider);
+    final rawMaterialState = ref.watch(rawMaterialProvider);
     final inboundState = ref.watch(inboundProvider);
     final colorScheme = Theme.of(context).colorScheme;
 
-    final activeProducts = inventoryState.products;
+    final activeProducts = rawMaterialState.rawMaterials;
 
     return Scaffold(
       appBar: AppBar(

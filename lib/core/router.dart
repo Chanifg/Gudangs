@@ -4,10 +4,19 @@ import '../screens/main_shell.dart';
 import '../screens/dashboard/login_screen.dart';
 import '../screens/settings/pin_setup_screen.dart';
 import '../screens/dashboard/dashboard_screen.dart';
-import '../screens/inventory/product_list_screen.dart';
-import '../screens/inventory/product_detail_screen.dart';
-import '../screens/inventory/product_form_screen.dart';
+import '../screens/inventory/raw_material_list_screen.dart';
+import '../screens/inventory/raw_material_detail_screen.dart';
+import '../screens/inventory/raw_material_form_screen.dart';
+import '../screens/inventory/finished_good_list_screen.dart';
+import '../screens/inventory/finished_good_detail_screen.dart';
+import '../screens/inventory/finished_good_form_screen.dart';
+import '../screens/bom/bom_list_screen.dart';
+import '../screens/bom/bom_form_screen.dart';
+import '../screens/production/production_screen.dart';
+import '../screens/production/production_history_screen.dart';
+import '../screens/inbound/inbound_list_screen.dart';
 import '../screens/inbound/inbound_form_screen.dart';
+import '../screens/outbound/outbound_list_screen.dart';
 import '../screens/outbound/outbound_form_screen.dart';
 import '../screens/employees/employee_list_screen.dart';
 import '../screens/employees/employee_form_screen.dart';
@@ -34,8 +43,6 @@ final router = GoRouter(
       return isGoingToSetup ? null : '/setup-pin';
     }
 
-    // Simple auth check state (we will hook it up with auth provider later)
-    // For now we check if going to login or setup
     return null;
   },
   routes: [
@@ -61,47 +68,123 @@ final router = GoRouter(
             child: DashboardScreen(),
           ),
         ),
+        
+        // Unified inventory route redirecting to raw materials
         GoRoute(
           path: '/inventory',
+          redirect: (context, state) => '/inventory/raw-materials',
+        ),
+
+        // Raw Materials Routes
+        GoRoute(
+          path: '/inventory/raw-materials',
           pageBuilder: (context, state) => const NoTransitionPage(
-            child: ProductListScreen(),
+            child: RawMaterialListScreen(),
           ),
           routes: [
             GoRoute(
               path: 'add',
               parentNavigatorKey: rootNavigatorKey,
-              builder: (context, state) => const ProductFormScreen(),
+              builder: (context, state) => const RawMaterialFormScreen(),
             ),
             GoRoute(
               path: ':id',
               parentNavigatorKey: rootNavigatorKey,
               builder: (context, state) {
-                final productId = state.pathParameters['id']!;
-                return ProductDetailScreen(productId: productId);
+                final id = state.pathParameters['id']!;
+                return RawMaterialDetailScreen(rawMaterialId: id);
               },
               routes: [
                 GoRoute(
                   path: 'edit',
                   parentNavigatorKey: rootNavigatorKey,
                   builder: (context, state) {
-                    final productId = state.pathParameters['id']!;
-                    return ProductFormScreen(productId: productId);
+                    final id = state.pathParameters['id']!;
+                    return RawMaterialFormScreen(rawMaterialId: id);
                   },
                 ),
               ],
             ),
           ],
         ),
+
+        // Finished Goods Routes
+        GoRoute(
+          path: '/inventory/finished-goods',
+          pageBuilder: (context, state) => const NoTransitionPage(
+            child: FinishedGoodListScreen(),
+          ),
+          routes: [
+            GoRoute(
+              path: 'add',
+              parentNavigatorKey: rootNavigatorKey,
+              builder: (context, state) => const FinishedGoodFormScreen(),
+            ),
+            GoRoute(
+              path: ':id',
+              parentNavigatorKey: rootNavigatorKey,
+              builder: (context, state) {
+                final id = state.pathParameters['id']!;
+                return FinishedGoodDetailScreen(finishedGoodId: id);
+              },
+              routes: [
+                GoRoute(
+                  path: 'edit',
+                  parentNavigatorKey: rootNavigatorKey,
+                  builder: (context, state) {
+                    final id = state.pathParameters['id']!;
+                    return FinishedGoodFormScreen(finishedGoodId: id);
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+
+        // BOM (Bill of Materials) Routes
+        GoRoute(
+          path: '/inventory/bom',
+          pageBuilder: (context, state) => const NoTransitionPage(
+            child: BomListScreen(),
+          ),
+          routes: [
+            GoRoute(
+              path: 'add',
+              parentNavigatorKey: rootNavigatorKey,
+              builder: (context, state) => const BomFormScreen(),
+            ),
+            GoRoute(
+              path: ':id/edit',
+              parentNavigatorKey: rootNavigatorKey,
+              builder: (context, state) {
+                final id = state.pathParameters['id']!;
+                return BomFormScreen(bomId: id);
+              },
+            ),
+          ],
+        ),
+
+        // Transactions Routes (including inbound/outbound lists and forms)
         GoRoute(
           path: '/transactions',
           pageBuilder: (context, state) => const NoTransitionPage(
-            child: ActivityListScreen(), // Under BottomNav tab: Histori
+            child: ActivityListScreen(), // Keep activity list as default transaction page
           ),
           routes: [
+            GoRoute(
+              path: 'inbound',
+              parentNavigatorKey: rootNavigatorKey,
+              builder: (context, state) => const InboundListScreen(),
+            ),
             GoRoute(
               path: 'inbound/add',
               parentNavigatorKey: rootNavigatorKey,
               builder: (context, state) => const InboundFormScreen(),
+            ),
+            GoRoute(
+              path: 'outbound',
+              parentNavigatorKey: rootNavigatorKey,
+              builder: (context, state) => const OutboundListScreen(),
             ),
             GoRoute(
               path: 'outbound/add',
@@ -126,6 +209,20 @@ final router = GoRouter(
             ),
           ],
         ),
+
+        // Production Execution & History Routes
+        GoRoute(
+          path: '/production',
+          parentNavigatorKey: rootNavigatorKey,
+          builder: (context, state) => const ProductionScreen(),
+        ),
+        GoRoute(
+          path: '/production/history',
+          parentNavigatorKey: rootNavigatorKey,
+          builder: (context, state) => const ProductionHistoryScreen(),
+        ),
+
+        // Employees Routes
         GoRoute(
           path: '/employees',
           pageBuilder: (context, state) => const NoTransitionPage(
@@ -147,10 +244,12 @@ final router = GoRouter(
             ),
           ],
         ),
+
+        // More Tab Routes (salary, reports, stats, pin, job-types)
         GoRoute(
           path: '/more',
           pageBuilder: (context, state) => const NoTransitionPage(
-            child: SettingsScreen(), // Profil / Settings / More screen
+            child: SettingsScreen(),
           ),
           routes: [
             GoRoute(

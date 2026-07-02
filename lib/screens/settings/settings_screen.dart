@@ -95,10 +95,12 @@ class SettingsScreen extends ConsumerWidget {
                     );
                   }
                 } else {
-                  final error = ref.read(settingsProvider).errorMessage ?? 'Gagal mengubah PIN';
-                  ScaffoldMessenger.of(ctx).showSnackBar(
-                    SnackBar(content: Text(error)),
-                  );
+                  if (ctx.mounted) {
+                    final error = ref.read(settingsProvider).errorMessage ?? 'Gagal mengubah PIN';
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      SnackBar(content: Text(error)),
+                    );
+                  }
                 }
               }
             },
@@ -119,7 +121,7 @@ class SettingsScreen extends ConsumerWidget {
         leading: Padding(
           padding: const EdgeInsets.only(left: 12),
           child: CircleAvatar(
-            backgroundColor: colorScheme.surfaceVariant,
+            backgroundColor: colorScheme.surfaceContainerHighest,
             child: const Icon(Icons.person, color: Color(0xFF006E2F)),
           ),
         ),
@@ -146,7 +148,7 @@ class SettingsScreen extends ConsumerWidget {
                     children: [
                       CircleAvatar(
                         radius: 30,
-                        backgroundColor: colorScheme.primary.withOpacity(0.1),
+                        backgroundColor: colorScheme.primary.withValues(alpha: 0.1),
                         child: Icon(Icons.account_box, color: colorScheme.primary, size: 36),
                       ),
                       const SizedBox(width: 16),
@@ -162,7 +164,7 @@ class SettingsScreen extends ConsumerWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
-                                color: colorScheme.surfaceVariant,
+                                color: colorScheme.surfaceContainerHighest,
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
@@ -230,7 +232,7 @@ class SettingsScreen extends ConsumerWidget {
                       onChanged: (val) {
                         ref.read(settingsProvider.notifier).toggleBiometric(val);
                       },
-                      activeColor: colorScheme.primaryContainer,
+                      activeThumbColor: colorScheme.primaryContainer,
                     ),
                     const Divider(height: 1, color: Color(0xFFF1F5F9)),
                     ListTile(
