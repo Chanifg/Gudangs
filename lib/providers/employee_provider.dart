@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/employee.dart';
 import '../services/database_service.dart';
+import 'audit_log_provider.dart';
+import 'auth_provider.dart';
 
 class EmployeeState {
   final List<Employee> employees;
@@ -28,17 +30,16 @@ class EmployeeState {
     return EmployeeState(
       employees: employees ?? this.employees,
       searchKeyword: searchKeyword ?? this.searchKeyword,
-      filterActive: filterActive, // allow resetting to null by omission if handled, or pass explicitly
+      filterActive: filterActive,
       errorMessage: errorMessage,
       isLoading: isLoading ?? this.isLoading,
     );
   }
 
-  // Helper copyWith to allow resetting filterActive to null
   EmployeeState copyWithResetFilter({
     List<Employee>? employees,
     String? searchKeyword,
-    bool? resetFilterActive, // if true, sets filterActive to null
+    bool? resetFilterActive,
     bool? filterActive,
     String? errorMessage,
     bool? isLoading,
@@ -54,14 +55,25 @@ class EmployeeState {
 }
 
 class EmployeeNotifier extends StateNotifier<EmployeeState> {
-  EmployeeNotifier() : super(EmployeeState(employees: [])) {
+  final Ref ref;
+
+  EmployeeNotifier(this.ref) : super(EmployeeState(employees: [])) {
+    ref.listen<AuthState>(authProvider, (previous, next) {
+      if (next.isAuthenticated) {
+        loadEmployees();
+      }
+    });
     loadEmployees();
   }
 
   void loadEmployees() {
+    if (!DatabaseService.isOperationalOpen) return;
     state = state.copyWith(isLoading: true);
     
-    var allEmployees = DatabaseService.employeesBox.values.toList();
+    // Filter out soft deleted employees
+    var allEmployees = DatabaseService.employeesBox.values
+        .where((emp) => emp.isDeleted != true)
+        .toList();
 
     // Apply Active Status Filter
     if (state.filterActive != null) {
@@ -114,11 +126,19 @@ class EmployeeNotifier extends StateNotifier<EmployeeState> {
       phoneNumber: phoneNumber.trim(),
       position: position.trim(),
       isActive: isActive,
+      isDeleted: false,
       createdAt: now,
       updatedAt: now,
     );
 
     await DatabaseService.employeesBox.put(id, employee);
+    
+    // Log audit
+    ref.read(auditLogProvider.notifier).logActivity(
+      action: 'TAMBAH_KARYAWAN',
+      description: 'Menambahkan karyawan baru: ${employee.fullName}',
+    );
+
     loadEmployees();
     return true;
   }
@@ -142,6 +162,7 @@ class EmployeeNotifier extends StateNotifier<EmployeeState> {
       return false;
     }
 
+    final oldName = employee.fullName;
     employee.fullName = fullName.trim();
     employee.phoneNumber = phoneNumber.trim();
     employee.position = position.trim();
@@ -149,6 +170,13 @@ class EmployeeNotifier extends StateNotifier<EmployeeState> {
     employee.updatedAt = DateTime.now();
 
     await employee.save();
+
+    // Log audit
+    ref.read(auditLogProvider.notifier).logActivity(
+      action: 'EDIT_KARYAWAN',
+      description: 'Mengubah profil karyawan: $oldName -> ${employee.fullName} (Status Aktif: ${employee.isActive})',
+    );
+
     loadEmployees();
     return true;
   }
@@ -160,6 +188,31 @@ class EmployeeNotifier extends StateNotifier<EmployeeState> {
       employee.isActive = !employee.isActive;
       employee.updatedAt = DateTime.now();
       await employee.save();
+      
+      // Log audit
+      ref.read(auditLogProvider.notifier).logActivity(
+        action: 'TOGGLE_AKTIF_KARYAWAN',
+        description: 'Mengubah status keaktifan karyawan ${employee.fullName}: ${employee.isActive ? "Aktif" : "Nonaktif"}',
+      );
+
+      loadEmployees();
+    }
+  }
+
+  // Soft delete employee
+  Future<void> deleteEmployee(String id) async {
+    final employee = DatabaseService.employeesBox.get(id);
+    if (employee != null) {
+      employee.isDeleted = true;
+      employee.updatedAt = DateTime.now();
+      await employee.save();
+
+      // Log audit
+      ref.read(auditLogProvider.notifier).logActivity(
+        action: 'HAPUS_KARYAWAN',
+        description: 'Menghapus karyawan (soft delete): ${employee.fullName}',
+      );
+
       loadEmployees();
     }
   }
@@ -170,5 +223,5 @@ class EmployeeNotifier extends StateNotifier<EmployeeState> {
 }
 
 final employeeProvider = StateNotifierProvider<EmployeeNotifier, EmployeeState>((ref) {
-  return EmployeeNotifier();
+  return EmployeeNotifier(ref);
 });

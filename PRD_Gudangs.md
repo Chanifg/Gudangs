@@ -1,7 +1,7 @@
 # PRD — Product Requirements Document
 # Aplikasi: **Gudangs**
-**Versi Dokumen:** 1.1.0  
-**Tanggal:** 2 Juli 2026  
+**Versi Dokumen:** 1.2.0  
+**Tanggal:** 3 Juli 2026  
 **Status:** Draft untuk Review  
 **Penulis:** Tim Product  
 
@@ -18,7 +18,7 @@
 7. [Success Metrics](#7-success-metrics)
 8. [Out of Scope](#8-out-of-scope)
 
-> **Catatan Versi 1.1.0:** Dokumen ini diperbarui untuk mencakup alur manufaktur — penambahan fitur Bill of Materials (BOM) dan Modul Produksi, serta pemisahan inventori menjadi Bahan Baku dan Barang Jadi.
+> **Catatan Versi 1.2.0:** Dokumen ini diperbarui untuk mencakup manajemen koreksi stok (Stock Adjustment & Stock Opname), log audit aktivitas sistem (Audit Trail), soft delete seragam pada master data, tabel Stock Movement terpadu, dan logika HPP berbasis Weighted Average.
 
 ---
 
@@ -315,6 +315,45 @@ Gudangs ditujukan untuk **satu jenis pengguna utama**: Admin/Pemilik Gudang atau
 
 ---
 
+### FR-14: Stock Adjustment & Stock Opname
+
+| ID | Fitur | Prioritas | Keterangan |
+|----|-------|-----------|------------|
+| FR-14.1 | Penyesuaian Stok Manual (Adjustment) | **Must** | Mengurangi/menambah stok barang secara manual dengan alasan koreksi (rusak, hilang, dll.) |
+| FR-14.2 | Stock Opname Berkala | **Must** | Mengaudit dan menyesuaikan seluruh stok sistem agar cocok dengan stok fisik aktual |
+| FR-14.3 | Tombol Pintasan Koreksi Stok | **Must** | Tombol "Sesuaikan Stok" langsung di halaman detail produk dan bahan baku |
+| FR-14.4 | Akses Menu Operasional | **Must** | Halaman koreksi stok terpusat di tab Pengaturan |
+
+---
+
+### FR-15: Audit Trail & Activity Log
+
+| ID | Fitur | Prioritas | Keterangan |
+|----|-------|-----------|------------|
+| FR-15.1 | Pencatatan Aksi Write/Mutasi | **Must** | Mencatar setiap tambah/edit/hapus master data dan transaksi stok |
+| FR-15.2 | Pencatatan Nama Operator | **Must** | Log mencantumkan nama admin (operator) yang aktif dari Settings |
+| FR-15.3 | Halaman Log Aktivitas Sistem | **Must** | Feed kronologis aktivitas sistem di menu Pengaturan |
+
+---
+
+### FR-16: Soft Delete (Seragam)
+
+| ID | Fitur | Prioritas | Keterangan |
+|----|-------|-----------|------------|
+| FR-16.1 | Soft Delete untuk Semua Master Data | **Must** | Bahan Baku, Produk Jadi, Karyawan, dan Jenis Pekerjaan di-soft-delete (`isDeleted = true`) |
+| FR-16.2 | Penyaringan Data Aktif | **Must** | Dropdown dan list form hanya menampilkan entitas aktif |
+
+---
+
+### FR-17: Tabel Stock Movement & Logika HPP (Weighted Average)
+
+| ID | Fitur | Prioritas | Keterangan |
+|----|-------|-----------|------------|
+| FR-17.1 | Tabel Stock Movement Terpadu | **Must** | Model Hive tunggal yang menyimpan setiap riwayat keluar/masuk/koreksi stok |
+| FR-17.2 | Logika HPP Weighted Average | **Must** | Menghitung rata-rata tertimbang harga beli bahan baku setiap kali terjadi inbound |
+
+---
+
 ## 5. User Stories
 
 ### Autentikasi
@@ -410,6 +449,14 @@ Gudangs ditujukan untuk **satu jenis pengguna utama**: Admin/Pemilik Gudang atau
 > **US-034** — *Sebagai admin, saya ingin sistem menghitung HPP (Harga Pokok Produksi) secara otomatis per batch produksi berdasarkan total biaya bahan baku yang digunakan, agar saya mengetahui biaya produksi aktual dan dapat menentukan harga jual yang tepat.*
 
 > **US-035** — *Sebagai admin, saya ingin melihat riwayat produksi lengkap (tanggal, produk, jumlah, bahan terpakai, dan HPP per batch), agar saya dapat melacak histori produksi dan menganalisis tren biaya produksi dari waktu ke waktu.*
+
+### Koreksi Stok & Audit Log (v1.2.0)
+
+> **US-036** — *Sebagai admin, saya ingin melakukan penyesuaian stok manual untuk satu barang jadi atau bahan baku, agar data stok di aplikasi selalu sinkron jika terjadi kerusakan atau kehilangan fisik.*
+
+> **US-037** — *Sebagai admin, saya ingin melakukan proses stock opname periodik di mana saya memasukkan jumlah stok fisik aktual dan sistem secara otomatis menghitung serta membukukan selisihnya, agar pencatatan stok kembali akurat.*
+
+> **US-038** — *Sebagai pemilik/admin, saya ingin melihat Log Aktivitas Sistem secara kronologis di menu Pengaturan, agar saya dapat melacak setiap perubahan data penting di gudang.*
 
 ---
 

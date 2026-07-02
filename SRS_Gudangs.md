@@ -890,6 +890,74 @@ Aplikasi ini memiliki **satu peran pengguna tunggal**: Admin.
 
 ---
 
+#### FR-046: Koreksi Stok Manual (Stock Adjustment)
+
+**Nama:** Manual Stock Adjustment  
+**Deskripsi:** Admin mengubah kuantitas stok bahan baku atau barang jadi secara langsung dengan menyertakan catatan alasan penyesuaian.
+
+| Sub-ID | Deskripsi |
+|--------|-----------|
+| FR-046.1 | Admin dapat menekan tombol "Sesuaikan Stok" dari halaman detail barang atau mengakses menu Koreksi Stok di Pengaturan. |
+| FR-046.2 | Form input: Pilih Barang, Tipe Koreksi (Tambah / Kurang), Jumlah Unit (> 0), Tanggal (default hari ini), dan Alasan/Catatan Koreksi (wajib diisi, mis: "Barang Rusak", "Barang Hilang", "Koreksi Awal"). |
+| FR-046.3 | Sistem memperbarui `currentStock` dari barang tersebut di Hive sesuai tipe koreksi. |
+| FR-046.4 | Sistem otomatis menulis entri pergerakan stok ke `StockMovement` dan mencatat aktivitas ke `AuditLog`. |
+
+---
+
+#### FR-047: Stock Opname Periodik
+
+**Nama:** Periodic Stock Opname  
+**Deskripsi:** Admin mencocokkan stok fisik aktual dengan stok tercatat di sistem untuk merekonsiliasi persediaan.
+
+| Sub-ID | Deskripsi |
+|--------|-----------|
+| FR-047.1 | Admin membuka menu Koreksi Stok > tab Stock Opname di Pengaturan. |
+| FR-047.2 | Admin memilih barang (Bahan Baku atau Barang Jadi), melihat Stok Sistem saat ini, lalu menginput Jumlah Stok Fisik Aktual (>= 0). |
+| FR-047.3 | Sistem secara otomatis menghitung selisih: `selisih = stokFisik - stokSistem`. |
+| FR-047.4 | Admin menekan konfirmasi, dan jika selisih != 0, sistem mengubah `currentStock` menjadi sama dengan `stokFisik`. |
+| FR-047.5 | Sistem menyimpan penyesuaian tersebut ke dalam `StockMovement` dengan tipe 'opname' dan mencatat aktivitas opname ke `AuditLog`. |
+
+---
+
+#### FR-048: Tabel Stock Movement Terpadu
+
+**Nama:** Unified Stock Movement History  
+**Deskripsi:** Semua transaksi penambahan, pengurangan, dan penyesuaian stok dicatat dalam satu collection terpadu untuk integritas data histori stok.
+
+| Sub-ID | Deskripsi |
+|--------|-----------|
+| FR-048.1 | Setiap kali terjadi Inbound, Outbound, Produksi (pengurangan bahan baku & penambahan barang jadi), Koreksi Manual, atau Stock Opname, sistem wajib membuat record `StockMovement` baru. |
+| FR-048.2 | Record mencatat: `id`, `itemId`, `itemName`, `itemType` ('product' \| 'raw_material'), `type`, `quantity` (kuantitas delta), `previousStock`, `newStock`, `unitCost`, `operatorName`, `date`, dan `notes`. |
+| FR-048.3 | Halaman Detail Bahan Baku dan Detail Produk menampilkan riwayat dari query filter tabel `StockMovement` ini, menggantikan pembacaan langsung dari box lama. |
+
+---
+
+#### FR-049: Audit Trail / Log Aktivitas Sistem
+
+**Nama:** System Audit Trail & Activity Log  
+**Deskripsi:** Sistem mencatat log setiap perubahan data penting di database lokal untuk keperluan audit harian.
+
+| Sub-ID | Deskripsi |
+|--------|-----------|
+| FR-049.1 | Setiap kali admin menambahkan, mengedit, atau men-soft-delete entitas master data (Karyawan, Jenis Pekerjaan, Bahan Baku, Produk Jadi, BOM) dan melakukan transaksi stok, sistem otomatis menulis entri ke `AuditLog`. |
+| FR-049.2 | Record audit log mencakup: ID unik log, nama operator (diambil dari `profileName` di `AppSettings`), tipe aksi, deskripsi aktivitas detail, dan timestamp waktu lokal. |
+| FR-049.3 | Admin dapat melihat seluruh daftar log aktivitas sistem secara kronologis di halaman "Log Aktivitas Sistem" melalui tab Pengaturan. |
+
+---
+
+#### FR-050: Soft Delete Seragam
+
+**Nama:** Uniform Soft Delete  
+**Deskripsi:** Seluruh entitas master data menggunakan mekanisme soft delete untuk mencegah kegagalan referensi data pada log transaksi historis.
+
+| Sub-ID | Deskripsi |
+|--------|-----------|
+| FR-050.1 | Master data Bahan Baku (`RawMaterial`), Barang Jadi (`FinishedGood`), Karyawan (`Employee`), dan Jenis Pekerjaan (`JobType`) memiliki properti `isDeleted` (boolean, default false). |
+| FR-050.2 | Ketika aksi "Hapus" dipicu pada data master tersebut, sistem hanya mengubah bendera `isDeleted = true` alih-alih menghapus fisiknya dari Hive. |
+| FR-050.3 | Dropdown pilihan (seperti dropdown pilih karyawan pada aktivitas harian, dropdown pilih bahan baku pada BOM, dll.) dan list view utama wajib menyaring data agar hanya menampilkan data dengan `isDeleted == false`. |
+
+---
+
 ### 3.2 Non-Functional Requirements
 
 ---
@@ -1153,6 +1221,7 @@ enum OutboundStatus { pending, terkirim, dibatalkan }
 | `phoneNumber` | String | Tidak | Nomor HP karyawan |
 | `position` | String | Tidak | Posisi/jabatan karyawan |
 | `isActive` | bool | Tidak | Status aktif (default: true) |
+| `isDeleted` | bool | Tidak | Soft delete flag (default: false) |
 | `createdAt` | DateTime | Tidak | Timestamp pembuatan record |
 | `updatedAt` | DateTime | Tidak | Timestamp terakhir diperbarui |
 
@@ -1193,6 +1262,7 @@ enum OutboundStatus { pending, terkirim, dibatalkan }
 | `id` | String (UUID) | Tidak | Identifier unik jenis pekerjaan |
 | `name` | String | Tidak | Nama jenis pekerjaan (mis: Bongkar Muat, Sortir) |
 | `ratePerUnit` | double | Tidak | Tarif per unit (>= 0) dalam rupiah |
+| `isDeleted` | bool | Tidak | Soft delete flag (default: false) |
 | `createdAt` | DateTime | Tidak | Timestamp pembuatan record |
 | `updatedAt` | DateTime | Tidak | Timestamp terakhir diperbarui |
 
@@ -1346,6 +1416,47 @@ enum OutboundStatus { pending, terkirim, dibatalkan }
 | `quantityUsed` | double | Tidak | Jumlah bahan baku yang benar-benar digunakan |
 | `unitCostAtTime` | double | Tidak | Harga per unit bahan baku saat produksi (snapshot dari defaultUnitCost) |
 | `totalCost` | double | Tidak | Total biaya: quantityUsed × unitCostAtTime |
+
+---
+
+### 4.14 Entity: StockMovement
+
+**Deskripsi:** Menyimpan setiap peristiwa perubahan jumlah stok (mutasi masuk, keluar, dan koreksi) untuk bahan baku maupun barang jadi.
+
+**Box Hive:** `stock_movements`  
+**Adapter:** `StockMovementAdapter`
+
+| Field | Tipe Data | Nullable | Deskripsi |
+|-------|-----------|----------|-----------|
+| `id` | String (UUID) | Tidak | Identifier unik pergerakan stok (primary key) |
+| `itemId` | String | Tidak | Referensi ke RawMaterial.id atau FinishedGood.id |
+| `itemName` | String | Tidak | Nama barang saat pergerakan terjadi |
+| `itemType` | String | Tidak | Jenis barang: 'product' (barang jadi) atau 'raw_material' (bahan baku) |
+| `type` | String | Tidak | Tipe mutasi: 'inbound', 'outbound', 'production_in', 'production_out', 'adjustment_add', 'adjustment_sub', 'opname' |
+| `quantity` | double | Tidak | Jumlah kuantitas delta pergerakan |
+| `previousStock` | double | Tidak | Jumlah stok sebelum pergerakan |
+| `newStock` | double | Tidak | Jumlah stok setelah pergerakan |
+| `unitCost` | double | Tidak | Biaya/nilai per unit saat mutasi terjadi (WAC untuk bahan baku) |
+| `operatorName` | String | Tidak | Nama admin yang mengonfirmasi mutasi |
+| `date` | DateTime | Tidak | Tanggal transaksi/mutasi |
+| `notes` | String | Ya | Keterangan/catatan koreksi atau mutasi |
+
+---
+
+### 4.15 Entity: AuditLog
+
+**Deskripsi:** Menyimpan setiap log aktivitas sistem untuk audit perubahan data gudang.
+
+**Box Hive:** `audit_logs`  
+**Adapter:** `AuditLogAdapter`
+
+| Field | Tipe Data | Nullable | Deskripsi |
+|-------|-----------|----------|-----------|
+| `id` | String (UUID) | Tidak | Identifier unik log audit (primary key) |
+| `operatorName` | String | Tidak | Nama operator yang melakukan perubahan |
+| `action` | String | Tidak | Nama aksi (mis: 'TAMBAH_KARYAWAN', 'EDIT_BAHAN_BAKU', 'KOREKSI_STOK') |
+| `description` | String | Tidak | Deskripsi lengkap detail perubahan yang dilakukan |
+| `timestamp` | DateTime | Tidak | Waktu terjadinya perubahan |
 
 ---
 

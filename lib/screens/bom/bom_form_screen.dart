@@ -314,6 +314,7 @@ class _BomFormScreenState extends ConsumerState<BomFormScreen> {
                                     Expanded(
                                       flex: 3,
                                       child: DropdownButtonFormField<String>(
+                                        isExpanded: true,
                                         value: row.selectedRawMaterialId,
                                         decoration: const InputDecoration(
                                           labelText: 'Bahan Baku',
@@ -322,7 +323,11 @@ class _BomFormScreenState extends ConsumerState<BomFormScreen> {
                                         items: rmState.rawMaterials.map((m) {
                                           return DropdownMenuItem<String>(
                                             value: m.id,
-                                            child: Text('${m.name} (${m.unit})'),
+                                            child: Text(
+                                              '${m.name} (${m.unit})',
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
+                                            ),
                                           );
                                         }).toList(),
                                         onChanged: (val) {

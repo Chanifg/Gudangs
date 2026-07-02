@@ -208,6 +208,7 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
   }
 
   Widget _buildKeyboardButton(String num) {
+    final colorScheme = Theme.of(context).colorScheme;
     return InkWell(
       onTap: () => _onNumberPressed(num),
       borderRadius: BorderRadius.circular(40),
@@ -217,8 +218,8 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: Colors.white,
-          border: Border.all(color: Colors.grey[200]!),
+          color: colorScheme.surfaceVariant,
+          border: Border.all(color: colorScheme.outlineVariant),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.02),
@@ -229,9 +230,10 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
         ),
         child: Text(
           num,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,
+            color: colorScheme.onSurface,
           ),
         ),
       ),

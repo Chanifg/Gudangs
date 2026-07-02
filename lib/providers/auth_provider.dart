@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../services/auth_service.dart';
+import '../services/database_service.dart';
 
 class AuthState {
   final bool isAuthenticated;
@@ -67,10 +69,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
       await AuthService.registerPin(pin);
+      await DatabaseService.openOperationalBoxes(pin);
       state = state.copyWith(isAuthenticated: true, hasPin: true, isLoading: false);
       return true;
     } catch (e) {
-      state = state.copyWith(errorMessage: 'Gagal membuat PIN', isLoading: false);
+      state = state.copyWith(errorMessage: 'Gagal membuat PIN: $e', isLoading: false);
       return false;
     }
   }
@@ -88,14 +91,23 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
     final success = AuthService.verifyPin(pin);
     if (success) {
-      state = state.copyWith(
-        isAuthenticated: true,
-        failedAttempts: 0,
-        lockoutUntil: null,
-        isLoading: false,
-      );
-      _lockoutTimer?.cancel();
-      return true;
+      try {
+        await DatabaseService.openOperationalBoxes(pin);
+        state = state.copyWith(
+          isAuthenticated: true,
+          failedAttempts: 0,
+          lockoutUntil: null,
+          isLoading: false,
+        );
+        _lockoutTimer?.cancel();
+        return true;
+      } catch (e) {
+        state = state.copyWith(
+          errorMessage: 'Gagal membuka basis data: $e',
+          isLoading: false,
+        );
+        return false;
+      }
     } else {
       final attempts = state.failedAttempts + 1;
       DateTime? lockoutUntil;
@@ -127,13 +139,32 @@ class AuthNotifier extends StateNotifier<AuthState> {
     final success = await AuthService.authenticateBiometric();
     
     if (success) {
-      state = state.copyWith(
-        isAuthenticated: true,
-        failedAttempts: 0,
-        lockoutUntil: null,
-        isLoading: false,
-      );
-      return true;
+      try {
+        const secureStorage = FlutterSecureStorage();
+        final pin = await secureStorage.read(key: 'user_pin');
+        if (pin != null) {
+          await DatabaseService.openOperationalBoxes(pin);
+          state = state.copyWith(
+            isAuthenticated: true,
+            failedAttempts: 0,
+            lockoutUntil: null,
+            isLoading: false,
+          );
+          return true;
+        } else {
+          state = state.copyWith(
+            errorMessage: 'Biometrik berhasil, tetapi PIN tidak ditemukan. Silakan masuk menggunakan PIN.',
+            isLoading: false,
+          );
+          return false;
+        }
+      } catch (e) {
+        state = state.copyWith(
+          errorMessage: 'Gagal membuka basis data via biometrik: $e',
+          isLoading: false,
+        );
+        return false;
+      }
     } else {
       state = state.copyWith(
         errorMessage: 'Autentikasi biometrik gagal atau dibatalkan.',
@@ -143,7 +174,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  void logout() {
+  Future<void> logout() async {
+    await DatabaseService.closeOperationalBoxes();
     state = state.copyWith(isAuthenticated: false, errorMessage: null);
   }
 

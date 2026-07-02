@@ -2,6 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/finished_good.dart';
 import '../services/database_service.dart';
+import 'stock_movement_provider.dart';
+import 'audit_log_provider.dart';
+import 'auth_provider.dart';
 
 class FinishedGoodState {
   final List<FinishedGood> finishedGoods;
@@ -32,11 +35,19 @@ class FinishedGoodState {
 }
 
 class FinishedGoodNotifier extends StateNotifier<FinishedGoodState> {
-  FinishedGoodNotifier() : super(FinishedGoodState(finishedGoods: [])) {
+  final Ref ref;
+
+  FinishedGoodNotifier(this.ref) : super(FinishedGoodState(finishedGoods: [])) {
+    ref.listen<AuthState>(authProvider, (previous, next) {
+      if (next.isAuthenticated) {
+        loadFinishedGoods();
+      }
+    });
     loadFinishedGoods();
   }
 
   void loadFinishedGoods() {
+    if (!DatabaseService.isOperationalOpen) return;
     state = state.copyWith(isLoading: true);
     final allGoods = DatabaseService.finishedGoodsBox.values
         .where((g) => !g.isDeleted)
@@ -99,6 +110,28 @@ class FinishedGoodNotifier extends StateNotifier<FinishedGoodState> {
     );
 
     await DatabaseService.finishedGoodsBox.put(id, good);
+
+    // Log Stock Movement for initial stock
+    if (initialStock > 0) {
+      await ref.read(stockMovementProvider.notifier).logMovement(
+        itemId: good.id,
+        itemName: good.name,
+        itemType: 'product',
+        type: 'inbound',
+        quantity: initialStock,
+        previousStock: 0.0,
+        newStock: initialStock,
+        unitCost: 0.0,
+        notes: 'Stok Awal',
+      );
+    }
+
+    // Log Audit Trail
+    await ref.read(auditLogProvider.notifier).logActivity(
+      action: 'TAMBAH_PRODUK',
+      description: 'Menambahkan produk jadi baru: ${good.name} (SKU: ${good.sku}, Qty Awal: $initialStock ${good.unit})',
+    );
+
     loadFinishedGoods();
     return true;
   }
@@ -120,12 +153,21 @@ class FinishedGoodNotifier extends StateNotifier<FinishedGoodState> {
       return false;
     }
 
+    final oldName = good.name;
+    final oldPrice = good.defaultUnitPrice;
     good.name = name.trim();
     good.unit = unit.trim();
     good.defaultUnitPrice = defaultUnitPrice;
     good.updatedAt = DateTime.now();
 
     await good.save();
+
+    // Log Audit Trail
+    await ref.read(auditLogProvider.notifier).logActivity(
+      action: 'EDIT_PRODUK',
+      description: 'Mengubah produk jadi: $oldName -> ${good.name} (Harga Jual: $oldPrice -> $defaultUnitPrice)',
+    );
+
     loadFinishedGoods();
     return true;
   }
@@ -148,6 +190,84 @@ class FinishedGoodNotifier extends StateNotifier<FinishedGoodState> {
     good.isDeleted = true;
     good.updatedAt = DateTime.now();
     await good.save();
+
+    // Log Audit Trail
+    await ref.read(auditLogProvider.notifier).logActivity(
+      action: 'HAPUS_PRODUK',
+      description: 'Menghapus produk jadi (soft delete): ${good.name} (SKU: ${good.sku})',
+    );
+
+    loadFinishedGoods();
+    return true;
+  }
+
+  // Stock Adjustment / Stock Opname for Products
+  Future<bool> adjustStock({
+    required String id,
+    required String type, // 'adjustment_add', 'adjustment_sub', 'opname'
+    required double quantity,
+    required String notes,
+  }) async {
+    final good = DatabaseService.finishedGoodsBox.get(id);
+    if (good == null || good.isDeleted) {
+      state = state.copyWith(errorMessage: 'Barang jadi tidak ditemukan');
+      return false;
+    }
+
+    if (quantity < 0) {
+      state = state.copyWith(errorMessage: 'Jumlah penyesuaian tidak boleh negatif');
+      return false;
+    }
+
+    final double prevStock = good.currentStock;
+    double newStock = prevStock;
+    double delta = quantity;
+
+    if (type == 'adjustment_add') {
+      newStock = prevStock + quantity;
+      delta = quantity;
+    } else if (type == 'adjustment_sub') {
+      newStock = prevStock - quantity;
+      delta = -quantity;
+    } else if (type == 'opname') {
+      newStock = quantity;
+      delta = quantity - prevStock;
+    }
+
+    if (newStock < 0) {
+      state = state.copyWith(errorMessage: 'Stok tidak boleh negatif setelah penyesuaian');
+      return false;
+    }
+
+    good.currentStock = newStock;
+    good.updatedAt = DateTime.now();
+    await good.save();
+
+    // Log Stock Movement
+    await ref.read(stockMovementProvider.notifier).logMovement(
+      itemId: good.id,
+      itemName: good.name,
+      itemType: 'product',
+      type: type,
+      quantity: delta.abs(),
+      previousStock: prevStock,
+      newStock: newStock,
+      unitCost: good.lastHPP ?? 0.0,
+      notes: notes.trim(),
+    );
+
+    // Log Audit Trail
+    final actionLabel = type == 'adjustment_add'
+        ? 'Tambah Stok'
+        : type == 'adjustment_sub'
+            ? 'Kurang Stok'
+            : 'Stock Opname';
+    
+    await ref.read(auditLogProvider.notifier).logActivity(
+      action: 'KOREKSI_STOK_PRODUK',
+      description: 'Penyesuaian stok produk ${good.name} ($actionLabel): $prevStock -> $newStock (Alasan: $notes)',
+    );
+
     loadFinishedGoods();
     return true;
   }
@@ -158,5 +278,5 @@ class FinishedGoodNotifier extends StateNotifier<FinishedGoodState> {
 }
 
 final finishedGoodProvider = StateNotifierProvider<FinishedGoodNotifier, FinishedGoodState>((ref) {
-  return FinishedGoodNotifier();
+  return FinishedGoodNotifier(ref);
 });

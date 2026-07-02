@@ -169,11 +169,8 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     final dateRangeStr = '${Formatters.formatDate(range.start)} - ${Formatters.formatDate(range.end)}';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text('Statistik Operasional'),
-        backgroundColor: Colors.white,
-        elevation: 0.5,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -214,7 +211,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             const SizedBox(height: 8),
             Text(
               dateRangeStr,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF565E74), fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
 
@@ -230,7 +227,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                   padding: const EdgeInsets.all(12.0),
                   child: Row(
                     children: [
-                      const Icon(Icons.info_outline, color: Color(0xFF006E2F)),
+                      Icon(Icons.info_outline, color: colorScheme.primary),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
@@ -256,9 +253,9 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                     height: 110,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: colorScheme.surface,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      border: Border.all(color: colorScheme.outlineVariant),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.02),
@@ -274,24 +271,24 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
+                            Text(
                               'MARGIN KOTOR',
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF565E74),
+                                color: colorScheme.onSurfaceVariant,
                                 letterSpacing: 0.5,
                               ),
                             ),
                             Container(
                               padding: const EdgeInsets.all(4),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFEFF4FF),
+                                color: colorScheme.primary.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Icon(
+                              child: Icon(
                                 Icons.trending_up,
-                                color: Color(0xFF006E2F),
+                                color: colorScheme.primary,
                                 size: 16,
                               ),
                             ),
@@ -302,10 +299,10 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                           children: [
                             Text(
                               '${grossMargin.toStringAsFixed(1)}%',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF0B1C30),
+                                color: colorScheme.onSurface,
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -313,7 +310,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                               children: [
                                 Icon(
                                   grossMargin >= 0 ? Icons.arrow_upward : Icons.arrow_downward,
-                                  color: grossMargin >= 0 ? const Color(0xFF22C55E) : const Color(0xFFBA1A1A),
+                                  color: grossMargin >= 0 ? Colors.green : Colors.red,
                                   size: 12,
                                 ),
                                 const SizedBox(width: 2),
@@ -322,7 +319,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
-                                    color: grossMargin >= 0 ? const Color(0xFF22C55E) : const Color(0xFFBA1A1A),
+                                    color: grossMargin >= 0 ? Colors.green : Colors.red,
                                   ),
                                 ),
                               ],
@@ -343,9 +340,9 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: colorScheme.surface,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          border: Border.all(color: colorScheme.outlineVariant),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -354,29 +351,29 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
+                                  Text(
                                     'RATA-RATA INBOUND',
                                     style: TextStyle(
                                       fontSize: 9,
                                       fontWeight: FontWeight.bold,
-                                      color: Color(0xFF565E74),
+                                      color: colorScheme.onSurfaceVariant,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     '${avgInbound.toStringAsFixed(0)} item/hari',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.bold,
-                                      color: Color(0xFF0B1C30),
+                                      color: colorScheme.onSurface,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            const Icon(
+                            Icon(
                               Icons.south_east,
-                              color: Color(0xFF22C55E),
+                              color: colorScheme.primary,
                               size: 18,
                             ),
                           ],
@@ -387,9 +384,9 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: colorScheme.surface,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          border: Border.all(color: colorScheme.outlineVariant),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -398,29 +395,29 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
+                                  Text(
                                     'RATA-RATA OUTBOUND',
                                     style: TextStyle(
                                       fontSize: 9,
                                       fontWeight: FontWeight.bold,
-                                      color: Color(0xFF565E74),
+                                      color: colorScheme.onSurfaceVariant,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     '${avgOutbound.toStringAsFixed(0)} item/hari',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.bold,
-                                      color: Color(0xFF0B1C30),
+                                      color: colorScheme.onSurface,
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                            const Icon(
+                            Icon(
                               Icons.north_east,
-                              color: Color(0xFF565E74),
+                              color: colorScheme.onSurfaceVariant,
                               size: 18,
                             ),
                           ],
@@ -437,9 +434,9 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: colorScheme.surface,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: colorScheme.outlineVariant),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -447,15 +444,15 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'Tren Pergerakan Stok',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0B1C30)),
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                       ),
                       Row(
                         children: [
-                          _buildLegendDot(color: const Color(0xFF22C55E), label: 'Inbound'),
+                          _buildLegendDot(color: colorScheme.primary, label: 'Inbound'),
                           const SizedBox(width: 8),
-                          _buildLegendDot(color: const Color(0xFF0B1C30), label: 'Outbound'),
+                          _buildLegendDot(color: colorScheme.onSurface, label: 'Outbound'),
                         ],
                       ),
                     ],
@@ -464,7 +461,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                   SizedBox(
                     height: 160,
                     child: LineChart(
-                      _buildLineChartData(useMockup, filteredInbounds, filteredOutbounds),
+                      _buildLineChartData(useMockup, filteredInbounds, filteredOutbounds, colorScheme),
                     ),
                   ),
                 ],
@@ -476,31 +473,31 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: colorScheme.surface,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: colorScheme.outlineVariant),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
+                  Text(
                     'Nilai Transaksi (Juta Rp)',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0B1C30)),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                   ),
                   const SizedBox(height: 24),
                   SizedBox(
                     height: 160,
                     child: BarChart(
-                      _buildBarChartData(useMockup, filteredInbounds, filteredOutbounds),
+                      _buildBarChartData(useMockup, filteredInbounds, filteredOutbounds, colorScheme),
                     ),
                   ),
                   const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      _buildLegendSquare(color: const Color(0xFF22C55E), label: 'Biaya Inbound'),
+                      _buildLegendSquare(color: colorScheme.primary, label: 'Biaya Inbound'),
                       const SizedBox(width: 16),
-                      _buildLegendSquare(color: const Color(0xFFBCCBB9), label: 'Nilai Outbound'),
+                      _buildLegendSquare(color: colorScheme.primary.withValues(alpha: 0.3), label: 'Nilai Outbound'),
                     ],
                   ),
                 ],
@@ -512,30 +509,30 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: colorScheme.surface,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: colorScheme.outlineVariant),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
+                  Text(
                     'Performa Karyawan',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0B1C30)),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                   ),
                   const SizedBox(height: 16),
                   if (employeeStats.isEmpty)
-                    const Center(
+                    Center(
                       child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16.0),
+                        padding: const EdgeInsets.symmetric(vertical: 16.0),
                         child: Text(
                           'Tidak ada aktivitas pencatatan karyawan',
-                          style: TextStyle(color: Color(0xFF565E74), fontSize: 12),
+                          style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
                         ),
                       ),
                     )
                   else
-                    ...employeeStats.take(3).map((item) => _buildEmployeeRow(item)),
+                    ...employeeStats.take(3).map((item) => _buildEmployeeRow(item, colorScheme)),
                 ],
               ),
             ),
@@ -545,30 +542,30 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: colorScheme.surface,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: colorScheme.outlineVariant),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
+                  Text(
                     'Produk Terpopuler (Keluar)',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0B1C30)),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                   ),
                   const SizedBox(height: 16),
                   if (popularProducts.isEmpty)
-                    const Center(
+                    Center(
                       child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16.0),
+                        padding: const EdgeInsets.symmetric(vertical: 16.0),
                         child: Text(
                           'Tidak ada barang keluar',
-                          style: TextStyle(color: Color(0xFF565E74), fontSize: 12),
+                          style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
                         ),
                       ),
                     )
                   else
-                    ...popularProducts.take(3).map((item) => _buildProductRow(item)),
+                    ...popularProducts.take(3).map((item) => _buildProductRow(item, colorScheme)),
                 ],
               ),
             ),
@@ -585,6 +582,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     IconData? icon,
     required VoidCallback onTap,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Expanded(
       child: InkWell(
         onTap: onTap,
@@ -593,15 +591,15 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
           padding: const EdgeInsets.symmetric(vertical: 10),
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: isActive ? const Color(0xFF22C55E) : Colors.white,
+            color: isActive ? colorScheme.primary : colorScheme.surfaceVariant,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: isActive ? const Color(0xFF22C55E) : const Color(0xFFE2E8F0),
+              color: isActive ? colorScheme.primary : colorScheme.outlineVariant,
             ),
             boxShadow: isActive
                 ? [
                     BoxShadow(
-                      color: const Color(0xFF22C55E).withValues(alpha: 0.2),
+                      color: colorScheme.primary.withValues(alpha: 0.2),
                       blurRadius: 6,
                       offset: const Offset(0, 2),
                     ),
@@ -615,7 +613,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                 Icon(
                   icon,
                   size: 14,
-                  color: isActive ? Colors.white : const Color(0xFF565E74),
+                  color: isActive ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
                 ),
                 const SizedBox(width: 4),
               ],
@@ -624,7 +622,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: isActive ? Colors.white : const Color(0xFF565E74),
+                  color: isActive ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
@@ -635,6 +633,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
   }
 
   Widget _buildLegendDot({required Color color, required String label}) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Row(
       children: [
         Container(
@@ -648,13 +647,14 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
         const SizedBox(width: 4),
         Text(
           label,
-          style: const TextStyle(fontSize: 10, color: Color(0xFF565E74), fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold),
         ),
       ],
     );
   }
 
   Widget _buildLegendSquare({required Color color, required String label}) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Row(
       children: [
         Container(
@@ -668,13 +668,13 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
         const SizedBox(width: 6),
         Text(
           label,
-          style: const TextStyle(fontSize: 11, color: Color(0xFF565E74), fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold),
         ),
       ],
     );
   }
 
-  Widget _buildEmployeeRow(EmployeeStatsItem item) {
+  Widget _buildEmployeeRow(EmployeeStatsItem item, ColorScheme colorScheme) {
     final clean = item.name.replaceAll(RegExp(r'[^\w\s]'), '').trim();
     final parts = clean.split(RegExp(r'\s+'));
     final initials = parts.isEmpty
@@ -691,13 +691,13 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             children: [
               CircleAvatar(
                 radius: 18,
-                backgroundColor: const Color(0xFFEFF4FF),
+                backgroundColor: colorScheme.primary.withValues(alpha: 0.1),
                 child: Text(
                   initials,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF006E2F),
+                    color: colorScheme.primary,
                   ),
                 ),
               ),
@@ -708,18 +708,18 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                   children: [
                     Text(
                       item.name,
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0B1C30)),
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                     ),
-                    const Text(
+                    Text(
                       'Staf Gudang',
-                      style: TextStyle(fontSize: 11, color: Color(0xFF565E74)),
+                      style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
                     ),
                   ],
                 ),
               ),
               Text(
                 '${item.count} Aktivitas',
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF006E2F)),
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: colorScheme.primary),
               ),
             ],
           ),
@@ -728,8 +728,8 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             borderRadius: BorderRadius.circular(10),
             child: LinearProgressIndicator(
               value: item.progress,
-              backgroundColor: const Color(0xFFEFF4FF),
-              color: const Color(0xFF22C55E),
+              backgroundColor: colorScheme.primary.withValues(alpha: 0.05),
+              color: colorScheme.primary,
               minHeight: 6,
             ),
           ),
@@ -738,14 +738,14 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     );
   }
 
-  Widget _buildProductRow(PopularProductItem item) {
+  Widget _buildProductRow(PopularProductItem item, ColorScheme colorScheme) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: colorScheme.outlineVariant),
       ),
       child: Row(
         children: [
@@ -753,10 +753,10 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: const Color(0xFFEFF4FF),
+              color: colorScheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: const Icon(Icons.inventory_2_outlined, color: Color(0xFF565E74), size: 18),
+            child: Icon(Icons.inventory_2_outlined, color: colorScheme.onSurfaceVariant, size: 18),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -767,12 +767,12 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                   item.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0B1C30)),
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   'SKU: ${item.sku}',
-                  style: const TextStyle(fontSize: 10, color: Color(0xFF565E74), fontFamily: 'monospace'),
+                  style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant, fontFamily: 'monospace'),
                 ),
               ],
             ),
@@ -783,11 +783,11 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             children: [
               Text(
                 '${item.quantity.toStringAsFixed(item.quantity % 1 == 0 ? 0 : 1)}',
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0B1C30)),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: colorScheme.onSurface),
               ),
-              const Text(
+              Text(
                 'unit',
-                style: TextStyle(fontSize: 10, color: Color(0xFF565E74)),
+                style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant),
               ),
             ],
           ),
@@ -800,6 +800,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     bool useMockup,
     List<InboundRecord> inbounds,
     List<OutboundRecord> outbounds,
+    ColorScheme colorScheme,
   ) {
     List<FlSpot> inboundSpots = [];
     List<FlSpot> outboundSpots = [];
@@ -863,7 +864,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                   axisSide: meta.axisSide,
                   child: Text(
                     days[val.toInt()],
-                    style: const TextStyle(fontSize: 10, color: Color(0xFF565E74), fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold),
                   ),
                 );
               }
@@ -877,16 +878,16 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
         LineChartBarData(
           spots: inboundSpots,
           isCurved: true,
-          color: const Color(0xFF22C55E),
+          color: colorScheme.primary,
           barWidth: 3,
           isStrokeCapRound: true,
           dotData: FlDotData(
             show: true,
             getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
               radius: 4,
-              color: const Color(0xFF22C55E),
+              color: colorScheme.primary,
               strokeWidth: 1,
-              strokeColor: Colors.white,
+              strokeColor: colorScheme.surface,
             ),
           ),
           belowBarData: BarAreaData(show: false),
@@ -894,16 +895,16 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
         LineChartBarData(
           spots: outboundSpots,
           isCurved: true,
-          color: const Color(0xFF0B1C30),
+          color: colorScheme.onSurface,
           barWidth: 3,
           isStrokeCapRound: true,
           dotData: FlDotData(
             show: true,
             getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
               radius: 4,
-              color: const Color(0xFF0B1C30),
+              color: colorScheme.onSurface,
               strokeWidth: 1,
-              strokeColor: Colors.white,
+              strokeColor: colorScheme.surface,
             ),
           ),
           belowBarData: BarAreaData(show: false),
@@ -916,6 +917,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     bool useMockup,
     List<InboundRecord> inbounds,
     List<OutboundRecord> outbounds,
+    ColorScheme colorScheme,
   ) {
     List<BarChartGroupData> barGroups = [];
 
@@ -934,7 +936,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
           barRods: [
             BarChartRodData(
               toY: (data['in'] as num).toDouble(),
-              color: const Color(0xFF22C55E),
+              color: colorScheme.primary,
               width: 12,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(3),
@@ -943,7 +945,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             ),
             BarChartRodData(
               toY: (data['out'] as num).toDouble(),
-              color: const Color(0xFFBCCBB9),
+              color: colorScheme.primary.withValues(alpha: 0.3),
               width: 12,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(3),
@@ -976,7 +978,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             barRods: [
               BarChartRodData(
                 toY: inVal[i]!,
-                color: const Color(0xFF22C55E),
+                color: colorScheme.primary,
                 width: 12,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(3),
@@ -985,7 +987,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
               ),
               BarChartRodData(
                 toY: outVal[i]!,
-                color: const Color(0xFFBCCBB9),
+                color: colorScheme.primary.withValues(alpha: 0.3),
                 width: 12,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(3),
@@ -1014,7 +1016,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                   axisSide: meta.axisSide,
                   child: Text(
                     days[val.toInt()],
-                    style: const TextStyle(fontSize: 10, color: Color(0xFF565E74), fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold),
                   ),
                 );
               }

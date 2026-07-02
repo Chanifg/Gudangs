@@ -2,6 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/raw_material.dart';
 import '../services/database_service.dart';
+import 'stock_movement_provider.dart';
+import 'audit_log_provider.dart';
+import 'auth_provider.dart';
 
 class RawMaterialState {
   final List<RawMaterial> rawMaterials;
@@ -32,11 +35,19 @@ class RawMaterialState {
 }
 
 class RawMaterialNotifier extends StateNotifier<RawMaterialState> {
-  RawMaterialNotifier() : super(RawMaterialState(rawMaterials: [])) {
+  final Ref ref;
+
+  RawMaterialNotifier(this.ref) : super(RawMaterialState(rawMaterials: [])) {
+    ref.listen<AuthState>(authProvider, (previous, next) {
+      if (next.isAuthenticated) {
+        loadRawMaterials();
+      }
+    });
     loadRawMaterials();
   }
 
   void loadRawMaterials() {
+    if (!DatabaseService.isOperationalOpen) return;
     state = state.copyWith(isLoading: true);
     final allMaterials = DatabaseService.rawMaterialsBox.values
         .where((m) => !m.isDeleted)
@@ -99,6 +110,28 @@ class RawMaterialNotifier extends StateNotifier<RawMaterialState> {
     );
 
     await DatabaseService.rawMaterialsBox.put(id, material);
+
+    // Log Stock Movement for initial stock
+    if (initialStock > 0) {
+      await ref.read(stockMovementProvider.notifier).logMovement(
+        itemId: material.id,
+        itemName: material.name,
+        itemType: 'raw_material',
+        type: 'inbound',
+        quantity: initialStock,
+        previousStock: 0.0,
+        newStock: initialStock,
+        unitCost: defaultUnitCost,
+        notes: 'Stok Awal',
+      );
+    }
+
+    // Log Audit Trail
+    await ref.read(auditLogProvider.notifier).logActivity(
+      action: 'TAMBAH_BAHAN_BAKU',
+      description: 'Menambahkan bahan baku baru: ${material.name} (SKU: ${material.sku}, Qty Awal: $initialStock ${material.unit})',
+    );
+
     loadRawMaterials();
     return true;
   }
@@ -120,12 +153,21 @@ class RawMaterialNotifier extends StateNotifier<RawMaterialState> {
       return false;
     }
 
+    final oldName = material.name;
+    final oldCost = material.defaultUnitCost;
     material.name = name.trim();
     material.unit = unit.trim();
     material.defaultUnitCost = defaultUnitCost;
     material.updatedAt = DateTime.now();
 
     await material.save();
+
+    // Log Audit Trail
+    await ref.read(auditLogProvider.notifier).logActivity(
+      action: 'EDIT_BAHAN_BAKU',
+      description: 'Mengubah bahan baku: $oldName -> ${material.name} (Harga Beli: $oldCost -> $defaultUnitCost)',
+    );
+
     loadRawMaterials();
     return true;
   }
@@ -148,6 +190,84 @@ class RawMaterialNotifier extends StateNotifier<RawMaterialState> {
     material.isDeleted = true;
     material.updatedAt = DateTime.now();
     await material.save();
+
+    // Log Audit Trail
+    await ref.read(auditLogProvider.notifier).logActivity(
+      action: 'HAPUS_BAHAN_BAKU',
+      description: 'Menghapus bahan baku (soft delete): ${material.name} (SKU: ${material.sku})',
+    );
+
+    loadRawMaterials();
+    return true;
+  }
+
+  // Stock Adjustment / Stock Opname for Raw Materials
+  Future<bool> adjustStock({
+    required String id,
+    required String type, // 'adjustment_add', 'adjustment_sub', 'opname'
+    required double quantity,
+    required String notes,
+  }) async {
+    final material = DatabaseService.rawMaterialsBox.get(id);
+    if (material == null || material.isDeleted) {
+      state = state.copyWith(errorMessage: 'Bahan baku tidak ditemukan');
+      return false;
+    }
+
+    if (quantity < 0) {
+      state = state.copyWith(errorMessage: 'Jumlah penyesuaian tidak boleh negatif');
+      return false;
+    }
+
+    final double prevStock = material.currentStock;
+    double newStock = prevStock;
+    double delta = quantity;
+
+    if (type == 'adjustment_add') {
+      newStock = prevStock + quantity;
+      delta = quantity;
+    } else if (type == 'adjustment_sub') {
+      newStock = prevStock - quantity;
+      delta = -quantity;
+    } else if (type == 'opname') {
+      newStock = quantity;
+      delta = quantity - prevStock;
+    }
+
+    if (newStock < 0) {
+      state = state.copyWith(errorMessage: 'Stok tidak boleh negatif setelah penyesuaian');
+      return false;
+    }
+
+    material.currentStock = newStock;
+    material.updatedAt = DateTime.now();
+    await material.save();
+
+    // Log Stock Movement
+    await ref.read(stockMovementProvider.notifier).logMovement(
+      itemId: material.id,
+      itemName: material.name,
+      itemType: 'raw_material',
+      type: type,
+      quantity: delta.abs(),
+      previousStock: prevStock,
+      newStock: newStock,
+      unitCost: material.defaultUnitCost,
+      notes: notes.trim(),
+    );
+
+    // Log Audit Trail
+    final actionLabel = type == 'adjustment_add'
+        ? 'Tambah Stok'
+        : type == 'adjustment_sub'
+            ? 'Kurang Stok'
+            : 'Stock Opname';
+    
+    await ref.read(auditLogProvider.notifier).logActivity(
+      action: 'KOREKSI_STOK_BAHAN_BAKU',
+      description: 'Penyesuaian stok ${material.name} ($actionLabel): $prevStock -> $newStock (Alasan: $notes)',
+    );
+
     loadRawMaterials();
     return true;
   }
@@ -158,5 +278,5 @@ class RawMaterialNotifier extends StateNotifier<RawMaterialState> {
 }
 
 final rawMaterialProvider = StateNotifierProvider<RawMaterialNotifier, RawMaterialState>((ref) {
-  return RawMaterialNotifier();
+  return RawMaterialNotifier(ref);
 });

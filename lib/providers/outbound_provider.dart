@@ -4,6 +4,10 @@ import 'package:uuid/uuid.dart';
 import '../models/outbound_record.dart';
 import '../services/database_service.dart';
 import 'finished_good_provider.dart';
+import 'stock_movement_provider.dart';
+import 'audit_log_provider.dart';
+import 'auth_provider.dart';
+import '../core/formatters.dart';
 
 class OutboundState {
   final List<OutboundRecord> records;
@@ -49,10 +53,16 @@ class OutboundNotifier extends StateNotifier<OutboundState> {
   final Ref _ref;
 
   OutboundNotifier(this._ref) : super(OutboundState(records: [])) {
+    _ref.listen<AuthState>(authProvider, (previous, next) {
+      if (next.isAuthenticated) {
+        loadOutboundRecords();
+      }
+    });
     loadOutboundRecords();
   }
 
   void loadOutboundRecords() {
+    if (!DatabaseService.isOperationalOpen) return;
     state = state.copyWith(isLoading: true);
     
     var allRecords = DatabaseService.outboundBox.values.toList();
@@ -160,12 +170,33 @@ class OutboundNotifier extends StateNotifier<OutboundState> {
     // 1. Save Outbound Record
     await DatabaseService.outboundBox.put(id, record);
 
+    final double prevStock = product.currentStock;
+
     // 2. Reduce Finished Good Stock (only if status is not dibatalkan)
     if (status != OutboundStatus.dibatalkan) {
       product.currentStock -= quantity;
       product.updatedAt = now;
       await product.save();
+
+      // Log Stock Movement
+      await _ref.read(stockMovementProvider.notifier).logMovement(
+        itemId: product.id,
+        itemName: product.name,
+        itemType: 'product',
+        type: 'outbound',
+        quantity: quantity,
+        previousStock: prevStock,
+        newStock: product.currentStock,
+        unitCost: product.lastHPP ?? 0.0,
+        notes: 'Pengiriman ke $destination: ${notes?.trim() ?? ""}',
+      );
     }
+
+    // Log Audit Trail
+    await _ref.read(auditLogProvider.notifier).logActivity(
+      action: 'TAMBAH_OUTBOUND',
+      description: 'Mencatat pengiriman produk ${product.name} ke $destination (Qty: $quantity ${product.unit}, Total Nilai: ${Formatters.formatRupiah(totalValue)}, Status: ${status.toString().split('.').last})',
+    );
 
     // 3. Refresh Providers
     loadOutboundRecords();
@@ -191,6 +222,7 @@ class OutboundNotifier extends StateNotifier<OutboundState> {
     }
 
     final now = DateTime.now();
+    final double prevStock = product.currentStock;
 
     // Case 1: Changing FROM Dibatalkan TO Pending/Terkirim (reduces stock)
     if (record.status == OutboundStatus.dibatalkan && newStatus != OutboundStatus.dibatalkan) {
@@ -203,18 +235,53 @@ class OutboundNotifier extends StateNotifier<OutboundState> {
       product.currentStock -= record.quantity;
       product.updatedAt = now;
       await product.save();
+
+      // Log Stock Movement
+      await _ref.read(stockMovementProvider.notifier).logMovement(
+        itemId: product.id,
+        itemName: product.name,
+        itemType: 'product',
+        type: 'outbound',
+        quantity: record.quantity,
+        previousStock: prevStock,
+        newStock: product.currentStock,
+        unitCost: product.lastHPP ?? 0.0,
+        notes: 'Mengaktifkan kembali pengiriman ke ${record.destination}',
+      );
     }
     // Case 2: Changing FROM Pending/Terkirim TO Dibatalkan (restores stock)
     else if (record.status != OutboundStatus.dibatalkan && newStatus == OutboundStatus.dibatalkan) {
       product.currentStock += record.quantity;
       product.updatedAt = now;
       await product.save();
+
+      // Log Stock Movement
+      await _ref.read(stockMovementProvider.notifier).logMovement(
+        itemId: product.id,
+        itemName: product.name,
+        itemType: 'product',
+        type: 'inbound', // adding back stock
+        quantity: record.quantity,
+        previousStock: prevStock,
+        newStock: product.currentStock,
+        unitCost: product.lastHPP ?? 0.0,
+        notes: 'Restorasi stok dari pembatalan pengiriman ke ${record.destination}',
+      );
     }
+
+    final oldStatusStr = record.status.toString().split('.').last;
+    final newStatusStr = newStatus.toString().split('.').last;
 
     // Update status
     record.status = newStatus;
     record.updatedAt = now;
     await record.save();
+
+    // Log Audit Trail
+    await _ref.read(auditLogProvider.notifier).logActivity(
+      action: 'EDIT_STATUS_OUTBOUND',
+      description: 'Mengubah status pengiriman ${product.name} ke ${record.destination}: $oldStatusStr -> $newStatusStr',
+    );
 
     // Refresh
     loadOutboundRecords();
@@ -249,11 +316,11 @@ class OutboundNotifier extends StateNotifier<OutboundState> {
     }
 
     final now = DateTime.now();
+    final double prevStock = product.currentStock;
+    final double delta = quantity - record.quantity;
 
     // If outbound is active (not dibatalkan), check stock adjustments
     if (record.status != OutboundStatus.dibatalkan) {
-      final delta = quantity - record.quantity; // positive means we are taking MORE stock
-
       if (product.currentStock - delta < 0) {
         state = state.copyWith(
           errorMessage: 'Stok tidak mencukupi untuk penyesuaian ini. Stok saat ini: ${product.currentStock} ${product.unit}, dibutuhkan tambahan: $delta ${product.unit}',
@@ -264,7 +331,23 @@ class OutboundNotifier extends StateNotifier<OutboundState> {
       product.currentStock -= delta;
       product.updatedAt = now;
       await product.save();
+
+      // Log Stock Movement
+      await _ref.read(stockMovementProvider.notifier).logMovement(
+        itemId: product.id,
+        itemName: product.name,
+        itemType: 'product',
+        type: 'outbound',
+        quantity: quantity,
+        previousStock: prevStock,
+        newStock: product.currentStock,
+        unitCost: product.lastHPP ?? 0.0,
+        notes: 'Koreksi Pengiriman ke $destination: ${notes?.trim() ?? ""}',
+      );
     }
+
+    final oldQty = record.quantity;
+    final oldPrice = record.sellingPricePerUnit;
 
     // Update fields
     record.quantity = quantity;
@@ -276,6 +359,12 @@ class OutboundNotifier extends StateNotifier<OutboundState> {
     record.updatedAt = now;
 
     await record.save();
+
+    // Log Audit Trail
+    await _ref.read(auditLogProvider.notifier).logActivity(
+      action: 'EDIT_OUTBOUND',
+      description: 'Mengubah data pengiriman ${product.name} ke $destination: Qty $oldQty -> $quantity, Harga/Unit: ${Formatters.formatRupiah(oldPrice)} -> ${Formatters.formatRupiah(sellingPricePerUnit)}',
+    );
 
     // Refresh
     loadOutboundRecords();

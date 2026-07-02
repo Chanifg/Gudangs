@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import '../../providers/inbound_provider.dart';
 import '../../providers/outbound_provider.dart';
 import '../../providers/activity_provider.dart';
+import '../../providers/settings_provider.dart';
+import '../../widgets/profile_avatar.dart';
+import '../../widgets/theme_toggle_button.dart';
 import '../../core/formatters.dart';
 import '../../models/outbound_record.dart';
 
@@ -15,6 +18,7 @@ class ActivityListScreen extends ConsumerWidget {
     final inboundState = ref.watch(inboundProvider);
     final outboundState = ref.watch(outboundProvider);
     final activityState = ref.watch(activityProvider);
+    final settingsState = ref.watch(settingsProvider);
     final colorScheme = Theme.of(context).colorScheme;
 
     return DefaultTabController(
@@ -23,9 +27,10 @@ class ActivityListScreen extends ConsumerWidget {
         appBar: AppBar(
           leading: Padding(
             padding: const EdgeInsets.only(left: 12),
-            child: CircleAvatar(
-              backgroundColor: colorScheme.surfaceVariant,
-              child: const Icon(Icons.person, color: Color(0xFF006E2F)),
+            child: ProfileAvatar(
+              imagePath: settingsState.profileImagePath,
+              name: settingsState.profileName,
+              radius: 20,
             ),
           ),
           title: const Text('Histori Catatan'),
@@ -38,12 +43,8 @@ class ActivityListScreen extends ConsumerWidget {
               Tab(text: 'Aktivitas Karyawan'),
             ],
           ),
-          actions: [
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(Icons.notifications_none),
-              color: colorScheme.primary,
-            ),
+          actions: const [
+            ThemeToggleButton(),
           ],
         ),
         body: TabBarView(
@@ -247,7 +248,7 @@ class ActivityListScreen extends ConsumerWidget {
                         'Kirim ke ${rec.destination}',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: isCancelled ? Colors.grey : Colors.black,
+                          color: isCancelled ? Colors.grey : colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: 4),

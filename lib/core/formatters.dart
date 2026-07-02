@@ -9,6 +9,7 @@ class Formatters {
 
   static final _dateFormat = DateFormat('d MMM yyyy', 'id_ID');
   static final _monthFormat = DateFormat('MMMM yyyy', 'id_ID');
+  static final _dateTimeFormat = DateFormat('d MMM yyyy, HH:mm', 'id_ID');
 
   static String formatRupiah(double amount) {
     return _rupiahFormat.format(amount);
@@ -30,5 +31,9 @@ class Formatters {
 
   static String formatMonth(DateTime date) {
     return _monthFormat.format(date);
+  }
+
+  static String formatDateTime(DateTime date) {
+    return _dateTimeFormat.format(date);
   }
 }

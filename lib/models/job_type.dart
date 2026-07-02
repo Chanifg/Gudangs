@@ -19,17 +19,22 @@ class JobType extends HiveObject {
   @HiveField(4)
   DateTime updatedAt;
 
+  @HiveField(5)
+  bool? isDeleted;
+
   JobType({
     required this.id,
     required this.name,
     required this.ratePerUnit,
     required this.createdAt,
     required this.updatedAt,
-  });
+    bool? isDeleted,
+  }) : isDeleted = isDeleted ?? false;
 
   JobType copyWith({
     String? name,
     double? ratePerUnit,
+    bool? isDeleted,
     DateTime? updatedAt,
   }) {
     return JobType(
@@ -38,6 +43,7 @@ class JobType extends HiveObject {
       ratePerUnit: ratePerUnit ?? this.ratePerUnit,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      isDeleted: isDeleted ?? this.isDeleted,
     );
   }
 }

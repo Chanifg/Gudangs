@@ -26,6 +26,7 @@ class SalaryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final salaryState = ref.watch(salaryProvider);
+    final colorScheme = Theme.of(context).colorScheme;
 
     final startDateStr = Formatters.formatDate(salaryState.dateRange.start);
     final endDateStr = Formatters.formatDate(salaryState.dateRange.end);
@@ -46,25 +47,25 @@ class SalaryScreen extends ConsumerWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEFF4FF), // softBlueGray
-                  border: Border.all(color: const Color(0xFFBCCBB9)), // borderGray
+                  color: colorScheme.primary.withValues(alpha: 0.1),
+                  border: Border.all(color: colorScheme.outline),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.calendar_today, color: Color(0xFF006E2F), size: 20),
+                    Icon(Icons.calendar_today, color: colorScheme.primary, size: 20),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         '$startDateStr - $endDateStr',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF0B1C30), // darkNavy
+                          color: colorScheme.onSurface,
                         ),
                       ),
                     ),
-                    const Icon(Icons.arrow_drop_down, color: Color(0xFF006E2F)),
+                    Icon(Icons.arrow_drop_down, color: colorScheme.primary),
                   ],
                 ),
               ),
@@ -82,9 +83,9 @@ class SalaryScreen extends ConsumerWidget {
                     height: 96,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: colorScheme.surface,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      border: Border.all(color: colorScheme.outlineVariant),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.04),
@@ -99,14 +100,14 @@ class SalaryScreen extends ConsumerWidget {
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.payments_outlined, color: Color(0xFF006E2F), size: 20),
+                            Icon(Icons.payments_outlined, color: colorScheme.primary, size: 20),
                             const SizedBox(width: 8),
                             Text(
                               'Total Estimasi Gaji',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
-                                color: const Color(0xFF565E74), // slateGrey
+                                color: colorScheme.onSurfaceVariant,
                               ),
                             ),
                           ],
@@ -114,10 +115,10 @@ class SalaryScreen extends ConsumerWidget {
                         Text(
                           Formatters.formatRupiah(salaryState.totalEstimatedWages),
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF0B1C30), // darkNavy
+                            color: colorScheme.onSurface,
                           ),
                         ),
                       ],
@@ -132,9 +133,9 @@ class SalaryScreen extends ConsumerWidget {
                     child: Container(
                       height: 96,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: colorScheme.surface,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        border: Border.all(color: colorScheme.outlineVariant),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.04),
@@ -153,7 +154,7 @@ class SalaryScreen extends ConsumerWidget {
                               width: 64,
                               height: 64,
                               decoration: BoxDecoration(
-                                color: const Color(0xFF22C55E).withValues(alpha: 0.15),
+                                color: colorScheme.primary.withValues(alpha: 0.15),
                                 shape: BoxShape.circle,
                               ),
                               child: BackdropFilter(
@@ -170,24 +171,24 @@ class SalaryScreen extends ConsumerWidget {
                               children: [
                                 Row(
                                   children: [
-                                    const Icon(Icons.bolt, color: Color(0xFF565E74), size: 20),
+                                    Icon(Icons.bolt, color: colorScheme.onSurfaceVariant, size: 20),
                                     const SizedBox(width: 8),
                                     Text(
                                       'Total Aktivitas',
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
-                                        color: const Color(0xFF565E74), // slateGrey
+                                        color: colorScheme.onSurfaceVariant,
                                       ),
                                     ),
                                   ],
                                 ),
                                 Text(
                                   '${salaryState.totalActivities}',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF0B1C30), // darkNavy
+                                    color: colorScheme.onSurface,
                                   ),
                                 ),
                               ],
@@ -212,26 +213,26 @@ class SalaryScreen extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    const Text(
+                    Text(
                       'Rincian Karyawan',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF0B1C30),
+                        color: colorScheme.onSurface,
                       ),
                     ),
                     Text(
                       '${salaryState.summaries.length} Karyawan',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF565E74),
+                        color: colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
-                const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                Divider(height: 1, color: colorScheme.outlineVariant),
               ],
             ),
           ),
@@ -245,11 +246,11 @@ class SalaryScreen extends ConsumerWidget {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.payments_outlined, size: 48, color: Colors.grey[400]),
+                            Icon(Icons.payments_outlined, size: 48, color: colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
                             const SizedBox(height: 8),
                             Text(
                               'Tidak ada aktivitas kerja pada periode ini.',
-                              style: TextStyle(color: Colors.grey[600]),
+                              style: TextStyle(color: colorScheme.onSurfaceVariant),
                             ),
                           ],
                         ),
@@ -298,13 +299,14 @@ class _EmployeeSalaryCardState extends State<EmployeeSalaryCard> {
   Widget build(BuildContext context) {
     final summary = widget.summary;
     final initials = _getInitials(summary.employee.fullName);
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12.0),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: colorScheme.outlineVariant),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -331,15 +333,15 @@ class _EmployeeSalaryCardState extends State<EmployeeSalaryCard> {
                   Container(
                     width: 40,
                     height: 40,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFEFF4FF), // softBlueGray
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     alignment: Alignment.center,
                     child: Text(
                       initials,
-                      style: const TextStyle(
-                        color: Color(0xFF006E2F), // primaryGreen
+                      style: TextStyle(
+                        color: colorScheme.primary,
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                       ),
@@ -353,18 +355,18 @@ class _EmployeeSalaryCardState extends State<EmployeeSalaryCard> {
                       children: [
                         Text(
                           summary.employee.fullName,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF0B1C30), // darkNavy
+                            color: colorScheme.onSurface,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           '${summary.totalActivities} Aktivitas',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: Color(0xFF565E74), // slateGrey
+                            color: colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ],
@@ -380,7 +382,7 @@ class _EmployeeSalaryCardState extends State<EmployeeSalaryCard> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: _isExpanded ? const Color(0xFF006E2F) : const Color(0xFF0B1C30),
+                          color: _isExpanded ? colorScheme.primary : colorScheme.onSurface,
                         ),
                       ),
                     ],
@@ -388,7 +390,7 @@ class _EmployeeSalaryCardState extends State<EmployeeSalaryCard> {
                   const SizedBox(width: 8),
                   Icon(
                     _isExpanded ? Icons.expand_less : Icons.expand_more,
-                    color: const Color(0xFF565E74),
+                    color: colorScheme.onSurfaceVariant,
                   ),
                 ],
               ),
@@ -399,19 +401,19 @@ class _EmployeeSalaryCardState extends State<EmployeeSalaryCard> {
           if (_isExpanded)
             Container(
               padding: const EdgeInsets.all(16.0),
-              decoration: const BoxDecoration(
-                color: Color(0xFFEFF4FF), // softBlueGray
+              decoration: BoxDecoration(
+                color: colorScheme.primary.withValues(alpha: 0.05),
                 border: Border(
-                  top: BorderSide(color: Color(0xFFE2E8F0)),
+                  top: BorderSide(color: colorScheme.outlineVariant),
                 ),
               ),
               child: summary.jobSummaries.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8.0),
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
                         child: Text(
                           'Detail tidak tersedia',
-                          style: TextStyle(color: Color(0xFF565E74), fontSize: 13),
+                          style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 13),
                         ),
                       ),
                     )
@@ -419,7 +421,7 @@ class _EmployeeSalaryCardState extends State<EmployeeSalaryCard> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         // Table Header
-                        const Row(
+                        Row(
                           children: [
                             Expanded(
                               flex: 3,
@@ -428,7 +430,7 @@ class _EmployeeSalaryCardState extends State<EmployeeSalaryCard> {
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.normal,
-                                  color: Color(0xFF565E74),
+                                  color: colorScheme.onSurfaceVariant,
                                 ),
                               ),
                             ),
@@ -440,7 +442,7 @@ class _EmployeeSalaryCardState extends State<EmployeeSalaryCard> {
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.normal,
-                                  color: Color(0xFF565E74),
+                                  color: colorScheme.onSurfaceVariant,
                                 ),
                               ),
                             ),
@@ -452,7 +454,7 @@ class _EmployeeSalaryCardState extends State<EmployeeSalaryCard> {
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.normal,
-                                  color: Color(0xFF565E74),
+                                  color: colorScheme.onSurfaceVariant,
                                 ),
                               ),
                             ),
@@ -464,23 +466,23 @@ class _EmployeeSalaryCardState extends State<EmployeeSalaryCard> {
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.normal,
-                                  color: Color(0xFF565E74),
+                                  color: colorScheme.onSurfaceVariant,
                                 ),
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 8),
-                        const Divider(height: 1, color: Color(0xFFBCCBB9)),
+                        Divider(height: 1, color: colorScheme.outline),
                         const SizedBox(height: 4),
                         // Table Body
                         ListView.separated(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           itemCount: summary.jobSummaries.length,
-                          separatorBuilder: (context, index) => const Divider(
+                          separatorBuilder: (context, index) => Divider(
                             height: 1,
-                            color: Color(0xFFE2E8F0),
+                            color: colorScheme.outlineVariant,
                           ),
                           itemBuilder: (context, idx) {
                             final job = summary.jobSummaries[idx];
@@ -496,18 +498,18 @@ class _EmployeeSalaryCardState extends State<EmployeeSalaryCard> {
                                       children: [
                                         Text(
                                           job.jobTypeName,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 13,
                                             fontWeight: FontWeight.w500,
-                                            color: Color(0xFF0B1C30),
+                                            color: colorScheme.onSurface,
                                           ),
                                         ),
                                         const SizedBox(height: 2),
                                         Text(
                                           'Tgl: ${job.dates.map((d) => DateFormat('d MMM', 'id_ID').format(d)).toSet().join(", ")}',
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             fontSize: 10,
-                                            color: Color(0xFF565E74),
+                                            color: colorScheme.onSurfaceVariant,
                                           ),
                                         ),
                                       ],
@@ -518,9 +520,9 @@ class _EmployeeSalaryCardState extends State<EmployeeSalaryCard> {
                                     child: Text(
                                       unitStr,
                                       textAlign: TextAlign.center,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 13,
-                                        color: Color(0xFF0B1C30),
+                                        color: colorScheme.onSurface,
                                       ),
                                     ),
                                   ),
@@ -529,9 +531,9 @@ class _EmployeeSalaryCardState extends State<EmployeeSalaryCard> {
                                     child: Text(
                                       Formatters.formatRupiah(job.ratePerUnit),
                                       textAlign: TextAlign.right,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 13,
-                                        color: Color(0xFF565E74),
+                                        color: colorScheme.onSurfaceVariant,
                                       ),
                                     ),
                                   ),
@@ -540,10 +542,10 @@ class _EmployeeSalaryCardState extends State<EmployeeSalaryCard> {
                                     child: Text(
                                       Formatters.formatRupiah(job.subtotal),
                                       textAlign: TextAlign.right,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 13,
                                         fontWeight: FontWeight.bold,
-                                        color: Color(0xFF0B1C30),
+                                        color: colorScheme.onSurface,
                                       ),
                                     ),
                                   ),
@@ -560,4 +562,3 @@ class _EmployeeSalaryCardState extends State<EmployeeSalaryCard> {
     );
   }
 }
-

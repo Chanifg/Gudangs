@@ -296,6 +296,7 @@ class MainShell extends StatelessWidget {
     final size = MediaQuery.of(context).size;
     final isDesktop = size.width >= 768;
     final selectedIndex = _getSelectedIndex(context);
+    final showGlobalFAB = selectedIndex == 0 || selectedIndex == 2;
 
     if (isDesktop) {
       return Scaffold(
@@ -399,7 +400,7 @@ class MainShell extends StatelessWidget {
             ),
           ],
         ),
-        floatingActionButton: _buildFAB(context),
+        floatingActionButton: showGlobalFAB ? _buildFAB(context) : null,
       );
     }
 
@@ -446,15 +447,15 @@ class MainShell extends StatelessWidget {
                 label: 'Karyawan',
               ),
               BottomNavigationBarItem(
-                icon: Icon(Icons.person_outline),
-                activeIcon: Icon(Icons.person),
-                label: 'Profil',
+                icon: Icon(Icons.settings_outlined),
+                activeIcon: Icon(Icons.settings),
+                label: 'Pengaturan',
               ),
             ],
           ),
         ),
       ),
-      floatingActionButton: _buildFAB(context),
+      floatingActionButton: showGlobalFAB ? _buildFAB(context) : null,
     );
   }
 

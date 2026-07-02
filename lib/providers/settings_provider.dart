@@ -4,11 +4,17 @@ import '../models/job_type.dart';
 import '../models/app_settings.dart';
 import '../services/database_service.dart';
 import '../services/auth_service.dart';
+import 'audit_log_provider.dart';
+import 'auth_provider.dart';
 
 class SettingsState {
   final List<JobType> jobTypes;
   final bool isBiometricEnabled;
   final String appVersion;
+  final String profileName;
+  final String profilePhone;
+  final String profileCompanyName;
+  final String? profileImagePath;
   final String? errorMessage;
   final bool isSuccess;
 
@@ -16,6 +22,10 @@ class SettingsState {
     required this.jobTypes,
     required this.isBiometricEnabled,
     required this.appVersion,
+    required this.profileName,
+    required this.profilePhone,
+    required this.profileCompanyName,
+    this.profileImagePath,
     this.errorMessage,
     this.isSuccess = false,
   });
@@ -24,6 +34,10 @@ class SettingsState {
     List<JobType>? jobTypes,
     bool? isBiometricEnabled,
     String? appVersion,
+    String? profileName,
+    String? profilePhone,
+    String? profileCompanyName,
+    String? profileImagePath,
     String? errorMessage,
     bool? isSuccess,
   }) {
@@ -31,6 +45,10 @@ class SettingsState {
       jobTypes: jobTypes ?? this.jobTypes,
       isBiometricEnabled: isBiometricEnabled ?? this.isBiometricEnabled,
       appVersion: appVersion ?? this.appVersion,
+      profileName: profileName ?? this.profileName,
+      profilePhone: profilePhone ?? this.profilePhone,
+      profileCompanyName: profileCompanyName ?? this.profileCompanyName,
+      profileImagePath: profileImagePath ?? this.profileImagePath,
       errorMessage: errorMessage,
       isSuccess: isSuccess ?? false,
     );
@@ -38,27 +56,107 @@ class SettingsState {
 }
 
 class SettingsNotifier extends StateNotifier<SettingsState> {
-  SettingsNotifier()
+  final Ref ref;
+
+  SettingsNotifier(this.ref)
       : super(SettingsState(
           jobTypes: [],
           isBiometricEnabled: true,
-          appVersion: '1.0.0',
+          appVersion: '1.2.0',
+          profileName: 'Admin Gudang Utama',
+          profilePhone: '',
+          profileCompanyName: 'Gudang Utama',
+          profileImagePath: null,
         )) {
+    ref.listen<AuthState>(authProvider, (previous, next) {
+      if (next.isAuthenticated) {
+        _loadSettings();
+      }
+    });
     _loadSettings();
   }
 
   void _loadSettings() {
+    if (!DatabaseService.settingsBox.isOpen) return;
     final settings = DatabaseService.settingsBox.get('settings') ?? AppSettings();
-    final list = DatabaseService.jobTypesBox.values.toList();
     
-    // Sort job types alphabetically
-    list.sort((a, b) => a.name.compareTo(b.name));
+    List<JobType> list = [];
+    if (DatabaseService.isOperationalOpen) {
+      list = DatabaseService.jobTypesBox.values
+          .where((jt) => jt.isDeleted != true)
+          .toList();
+      // Sort job types alphabetically
+      list.sort((a, b) => a.name.compareTo(b.name));
+    }
 
     state = SettingsState(
       jobTypes: list,
       isBiometricEnabled: settings.isBiometricEnabled,
       appVersion: settings.appVersion,
+      profileName: settings.profileName ?? 'Admin Gudang Utama',
+      profilePhone: settings.profilePhone ?? '',
+      profileCompanyName: settings.profileCompanyName ?? 'Gudang Utama',
+      profileImagePath: settings.profileImagePath,
     );
+  }
+
+  // Update profile details in settings
+  Future<bool> updateProfile({
+    required String name,
+    required String companyName,
+    required String phone,
+    String? profileImagePath,
+  }) async {
+    if (name.trim().isEmpty) {
+      state = state.copyWith(errorMessage: 'Nama pengguna wajib diisi');
+      return false;
+    }
+
+    try {
+      final settings = DatabaseService.settingsBox.get('settings') ?? AppSettings();
+      final oldName = settings.profileName;
+      settings.profileName = name.trim();
+      settings.profileCompanyName = companyName.trim();
+      settings.profilePhone = phone.trim();
+      if (profileImagePath != null) {
+        settings.profileImagePath = profileImagePath;
+      }
+      
+      await DatabaseService.settingsBox.put('settings', settings);
+      
+      // Log audit
+      ref.read(auditLogProvider.notifier).logActivity(
+        action: 'EDIT_PROFIL',
+        description: 'Mengubah nama profil admin: $oldName -> ${settings.profileName}',
+      );
+
+      _loadSettings();
+      return true;
+    } catch (e) {
+      state = state.copyWith(errorMessage: 'Gagal memperbarui profil: $e');
+      return false;
+    }
+  }
+
+  // Update profile image only
+  Future<bool> updateProfileImage(String path) async {
+    try {
+      final settings = DatabaseService.settingsBox.get('settings') ?? AppSettings();
+      settings.profileImagePath = path;
+      await DatabaseService.settingsBox.put('settings', settings);
+      
+      // Log audit
+      ref.read(auditLogProvider.notifier).logActivity(
+        action: 'EDIT_FOTO_PROFIL',
+        description: 'Mengubah foto profil admin',
+      );
+
+      _loadSettings();
+      return true;
+    } catch (e) {
+      state = state.copyWith(errorMessage: 'Gagal memperbarui foto profil: $e');
+      return false;
+    }
   }
 
   // Add JobType
@@ -74,11 +172,19 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       id: id,
       name: name.trim(),
       ratePerUnit: ratePerUnit,
+      isDeleted: false,
       createdAt: now,
       updatedAt: now,
     );
 
     await DatabaseService.jobTypesBox.put(id, jobType);
+    
+    // Log audit
+    ref.read(auditLogProvider.notifier).logActivity(
+      action: 'TAMBAH_TIPE_PEKERJAAN',
+      description: 'Menambahkan jenis pekerjaan baru: ${jobType.name} (Tarif: $ratePerUnit)',
+    );
+
     _loadSettings();
     return true;
   }
@@ -96,29 +202,41 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       return false;
     }
 
+    final oldName = jobType.name;
     jobType.name = name.trim();
     jobType.ratePerUnit = ratePerUnit;
     jobType.updatedAt = DateTime.now();
 
     await jobType.save();
+    
+    // Log audit
+    ref.read(auditLogProvider.notifier).logActivity(
+      action: 'EDIT_TIPE_PEKERJAAN',
+      description: 'Mengubah jenis pekerjaan: $oldName -> ${jobType.name} (Tarif: $ratePerUnit)',
+    );
+
     _loadSettings();
     return true;
   }
 
   // Delete JobType
   Future<bool> deleteJobType(String id) async {
-    // Check if job type is being used in any activity records
-    final isUsed = DatabaseService.activityBox.values.any((act) => act.jobTypeId == id);
-    if (isUsed) {
-      state = state.copyWith(
-        errorMessage: 'Tidak dapat menghapus jenis pekerjaan ini karena masih digunakan dalam riwayat aktivitas karyawan.',
-      );
-      return false;
-    }
+    final jobType = DatabaseService.jobTypesBox.get(id);
+    if (jobType != null) {
+      jobType.isDeleted = true;
+      jobType.updatedAt = DateTime.now();
+      await jobType.save();
 
-    await DatabaseService.jobTypesBox.delete(id);
-    _loadSettings();
-    return true;
+      // Log audit
+      ref.read(auditLogProvider.notifier).logActivity(
+        action: 'HAPUS_TIPE_PEKERJAAN',
+        description: 'Menghapus jenis pekerjaan (soft delete): ${jobType.name}',
+      );
+
+      _loadSettings();
+      return true;
+    }
+    return false;
   }
 
   // Toggle biometric settings
@@ -126,6 +244,13 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     final settings = DatabaseService.settingsBox.get('settings') ?? AppSettings();
     settings.isBiometricEnabled = enabled;
     await DatabaseService.settingsBox.put('settings', settings);
+    
+    // Log audit
+    ref.read(auditLogProvider.notifier).logActivity(
+      action: 'EDIT_BIOMETRIK',
+      description: 'Mengubah status biometrik menjadi: ${enabled ? "Aktif" : "Nonaktif"}',
+    );
+
     state = state.copyWith(isBiometricEnabled: enabled);
   }
 
@@ -142,8 +267,19 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     }
 
     await AuthService.registerPin(newPin);
+    
+    // Log audit
+    ref.read(auditLogProvider.notifier).logActivity(
+      action: 'UBAH_PIN',
+      description: 'Mengubah PIN login aplikasi',
+    );
+
     state = state.copyWith(isSuccess: true);
     return true;
+  }
+
+  void refreshJobTypes() {
+    _loadSettings();
   }
 
   void clearMessage() {
@@ -152,5 +288,5 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
 }
 
 final settingsProvider = StateNotifierProvider<SettingsNotifier, SettingsState>((ref) {
-  return SettingsNotifier();
+  return SettingsNotifier(ref);
 });

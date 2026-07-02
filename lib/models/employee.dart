@@ -25,21 +25,26 @@ class Employee extends HiveObject {
   @HiveField(6)
   DateTime updatedAt;
 
+  @HiveField(7)
+  bool? isDeleted;
+
   Employee({
     required this.id,
     required this.fullName,
     required this.phoneNumber,
     required this.position,
     this.isActive = true,
+    bool? isDeleted,
     required this.createdAt,
     required this.updatedAt,
-  });
+  }) : isDeleted = isDeleted ?? false;
 
   Employee copyWith({
     String? fullName,
     String? phoneNumber,
     String? position,
     bool? isActive,
+    bool? isDeleted,
     DateTime? updatedAt,
   }) {
     return Employee(
@@ -48,6 +53,7 @@ class Employee extends HiveObject {
       phoneNumber: phoneNumber ?? this.phoneNumber,
       position: position ?? this.position,
       isActive: isActive ?? this.isActive,
+      isDeleted: isDeleted ?? this.isDeleted,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

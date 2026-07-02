@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/bom_provider.dart';
 import '../../providers/production_provider.dart';
 import '../../core/formatters.dart';
+import '../../services/database_service.dart';
 
 class ProductionScreen extends ConsumerStatefulWidget {
   const ProductionScreen({super.key});
@@ -15,6 +16,7 @@ class _ProductionScreenState extends ConsumerState<ProductionScreen> {
   final _formKey = GlobalKey<FormState>();
   final _qtyController = TextEditingController();
   final _noteController = TextEditingController();
+  final _dateController = TextEditingController();
 
   String? _selectedBOMId;
   DateTime _selectedDate = DateTime.now();
@@ -23,6 +25,7 @@ class _ProductionScreenState extends ConsumerState<ProductionScreen> {
   @override
   void initState() {
     super.initState();
+    _dateController.text = Formatters.formatDate(_selectedDate);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(bomProvider.notifier).loadBOMs();
     });
@@ -32,6 +35,7 @@ class _ProductionScreenState extends ConsumerState<ProductionScreen> {
   void dispose() {
     _qtyController.dispose();
     _noteController.dispose();
+    _dateController.dispose();
     super.dispose();
   }
 
@@ -45,6 +49,7 @@ class _ProductionScreenState extends ConsumerState<ProductionScreen> {
     if (picked != null) {
       setState(() {
         _selectedDate = picked;
+        _dateController.text = Formatters.formatDate(_selectedDate);
       });
     }
   }
@@ -70,6 +75,14 @@ class _ProductionScreenState extends ConsumerState<ProductionScreen> {
 
     if (mounted) {
       if (success) {
+        final bom = ref.read(bomProvider).boms.firstWhere((b) => b.id == _selectedBOMId);
+        final finishedGoodName = bom.finishedGoodName;
+        final fg = DatabaseService.finishedGoodsBox.get(bom.finishedGoodId);
+        final double updatedStock = fg?.currentStock ?? 0.0;
+        final validationResult = ref.read(productionProvider.notifier).validateStock(_selectedBOMId!, qty);
+        final double unitHpp = validationResult.estimatedHPP;
+        final String unit = fg?.unit ?? 'unit';
+
         showDialog(
           context: context,
           barrierDismissible: false,
@@ -82,8 +95,65 @@ class _ProductionScreenState extends ConsumerState<ProductionScreen> {
                   Text('Produksi Berhasil'),
                 ],
               ),
-              content: const Text(
-                'Proses produksi berhasil dicatat. Stok bahan baku otomatis dikurangi, dan stok barang jadi otomatis bertambah.',
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Proses produksi berhasil dicatat. Stok bahan baku otomatis dikurangi, dan stok barang jadi otomatis bertambah.',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          finishedGoodName,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0B1C30)),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Hasil Produksi:', style: TextStyle(fontSize: 12, color: Color(0xFF565E74))),
+                            Text('$qty $unit', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('HPP per Unit:', style: TextStyle(fontSize: 12, color: Color(0xFF565E74))),
+                            Text(Formatters.formatRupiah(unitHpp), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        const Divider(height: 16, color: Color(0xFFE2E8F0)),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Total Stok Terbaru:', style: TextStyle(fontSize: 12, color: Color(0xFF565E74))),
+                            Text(
+                              '$updatedStock $unit',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF006E2F),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
               actions: [
                 TextButton(
@@ -235,10 +305,10 @@ class _ProductionScreenState extends ConsumerState<ProductionScreen> {
                                 onTap: _selectDate,
                                 child: IgnorePointer(
                                   child: TextFormField(
-                                    decoration: InputDecoration(
+                                    controller: _dateController,
+                                    decoration: const InputDecoration(
                                       labelText: 'Tanggal Produksi',
-                                      hintText: Formatters.formatDate(_selectedDate),
-                                      prefixIcon: const Icon(Icons.calendar_today),
+                                      prefixIcon: Icon(Icons.calendar_today),
                                     ),
                                   ),
                                 ),

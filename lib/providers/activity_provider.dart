@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/activity_record.dart';
 import '../services/database_service.dart';
+import 'audit_log_provider.dart';
+import 'auth_provider.dart';
+import '../core/formatters.dart';
 
 class ActivityState {
   final List<ActivityRecord> records;
@@ -41,11 +44,19 @@ class ActivityState {
 }
 
 class ActivityNotifier extends StateNotifier<ActivityState> {
-  ActivityNotifier() : super(ActivityState(records: [])) {
+  final Ref ref;
+
+  ActivityNotifier(this.ref) : super(ActivityState(records: [])) {
+    ref.listen<AuthState>(authProvider, (previous, next) {
+      if (next.isAuthenticated) {
+        loadActivityRecords();
+      }
+    });
     loadActivityRecords();
   }
 
   void loadActivityRecords() {
+    if (!DatabaseService.isOperationalOpen) return;
     state = state.copyWith(isLoading: true);
     
     var allRecords = DatabaseService.activityBox.values.toList();
@@ -105,12 +116,12 @@ class ActivityNotifier extends StateNotifier<ActivityState> {
     final employee = DatabaseService.employeesBox.get(employeeId);
     final jobType = DatabaseService.jobTypesBox.get(jobTypeId);
 
-    if (employee == null || !employee.isActive) {
+    if (employee == null || !employee.isActive || employee.isDeleted == true) {
       state = state.copyWith(errorMessage: 'Karyawan tidak ditemukan atau sudah tidak aktif.');
       return false;
     }
 
-    if (jobType == null) {
+    if (jobType == null || jobType.isDeleted == true) {
       state = state.copyWith(errorMessage: 'Jenis pekerjaan tidak ditemukan.');
       return false;
     }
@@ -133,6 +144,13 @@ class ActivityNotifier extends StateNotifier<ActivityState> {
     );
 
     await DatabaseService.activityBox.put(id, record);
+
+    // Log Audit Trail
+    await ref.read(auditLogProvider.notifier).logActivity(
+      action: 'TAMBAH_AKTIVITAS_KARYAWAN',
+      description: 'Mencatat aktivitas kerja ${employee.fullName} ($units unit ${jobType.name}, Estimasi Upah: ${Formatters.formatRupiah(estimatedWage)})',
+    );
+
     loadActivityRecords();
     return true;
   }
@@ -155,20 +173,44 @@ class ActivityNotifier extends StateNotifier<ActivityState> {
       return false;
     }
 
+    final oldUnits = record.units;
+    final oldWage = record.estimatedWage;
+
     record.units = units;
     record.estimatedWage = units * record.ratePerUnit;
     record.date = date;
     record.notes = notes?.trim();
 
     await record.save();
+
+    // Log Audit Trail
+    await ref.read(auditLogProvider.notifier).logActivity(
+      action: 'EDIT_AKTIVITAS_KARYAWAN',
+      description: 'Mengubah catatan aktivitas ${record.employeeName} (${record.jobTypeName}): $oldUnits unit -> $units unit (Upah: ${Formatters.formatRupiah(oldWage)} -> ${Formatters.formatRupiah(record.estimatedWage)})',
+    );
+
     loadActivityRecords();
     return true;
   }
 
   // Delete Activity Record
   Future<void> deleteActivity(String id) async {
-    await DatabaseService.activityBox.delete(id);
-    loadActivityRecords();
+    final record = DatabaseService.activityBox.get(id);
+    if (record != null) {
+      final employeeName = record.employeeName;
+      final jobTypeName = record.jobTypeName;
+      final units = record.units;
+
+      await DatabaseService.activityBox.delete(id);
+
+      // Log Audit Trail
+      await ref.read(auditLogProvider.notifier).logActivity(
+        action: 'HAPUS_AKTIVITAS_KARYAWAN',
+        description: 'Menghapus catatan aktivitas ${employeeName}: $units unit $jobTypeName',
+      );
+
+      loadActivityRecords();
+    }
   }
 
   void clearError() {
@@ -177,5 +219,5 @@ class ActivityNotifier extends StateNotifier<ActivityState> {
 }
 
 final activityProvider = StateNotifierProvider<ActivityNotifier, ActivityState>((ref) {
-  return ActivityNotifier();
+  return ActivityNotifier(ref);
 });

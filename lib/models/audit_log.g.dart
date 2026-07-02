@@ -1,53 +1,44 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'employee.dart';
+part of 'audit_log.dart';
 
 // **************************************************************************
 // TypeAdapterGenerator
 // **************************************************************************
 
-class EmployeeAdapter extends TypeAdapter<Employee> {
+class AuditLogAdapter extends TypeAdapter<AuditLog> {
   @override
-  final int typeId = 3;
+  final int typeId = 15;
 
   @override
-  Employee read(BinaryReader reader) {
+  AuditLog read(BinaryReader reader) {
     final numOfFields = reader.readByte();
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return Employee(
+    return AuditLog(
       id: fields[0] as String,
-      fullName: fields[1] as String,
-      phoneNumber: fields[2] as String,
-      position: fields[3] as String,
-      isActive: fields[4] as bool,
-      isDeleted: fields[7] as bool?,
-      createdAt: fields[5] as DateTime,
-      updatedAt: fields[6] as DateTime,
+      operatorName: fields[1] as String,
+      action: fields[2] as String,
+      description: fields[3] as String,
+      timestamp: fields[4] as DateTime,
     );
   }
 
   @override
-  void write(BinaryWriter writer, Employee obj) {
+  void write(BinaryWriter writer, AuditLog obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(5)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
-      ..write(obj.fullName)
+      ..write(obj.operatorName)
       ..writeByte(2)
-      ..write(obj.phoneNumber)
+      ..write(obj.action)
       ..writeByte(3)
-      ..write(obj.position)
+      ..write(obj.description)
       ..writeByte(4)
-      ..write(obj.isActive)
-      ..writeByte(5)
-      ..write(obj.createdAt)
-      ..writeByte(6)
-      ..write(obj.updatedAt)
-      ..writeByte(7)
-      ..write(obj.isDeleted);
+      ..write(obj.timestamp);
   }
 
   @override
@@ -56,7 +47,7 @@ class EmployeeAdapter extends TypeAdapter<Employee> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is EmployeeAdapter &&
+      other is AuditLogAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }

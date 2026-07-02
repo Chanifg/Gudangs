@@ -1,5 +1,6 @@
 import 'package:bcrypt/bcrypt.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'database_service.dart';
 import '../models/app_settings.dart';
 
@@ -46,6 +47,10 @@ class AuthService {
     final settings = DatabaseService.settingsBox.get('settings') ?? AppSettings();
     settings.pinHash = hash;
     await DatabaseService.settingsBox.put('settings', settings);
+
+    // Save the raw PIN securely for dynamic database encryption retrieval upon biometric login
+    const secureStorage = FlutterSecureStorage();
+    await secureStorage.write(key: 'user_pin', value: pin);
   }
 
   // Verify PIN

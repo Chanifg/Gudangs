@@ -3,7 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
-import '../../providers/inventory_provider.dart';
+import '../../providers/settings_provider.dart';
+import '../../widgets/profile_avatar.dart';
+import '../../widgets/theme_toggle_button.dart';
+import '../../providers/raw_material_provider.dart';
+import '../../providers/finished_good_provider.dart';
 import '../../providers/inbound_provider.dart';
 import '../../providers/outbound_provider.dart';
 import '../../providers/activity_provider.dart';
@@ -25,16 +29,20 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final inventoryState = ref.watch(inventoryProvider);
+    final rawMaterialState = ref.watch(rawMaterialProvider);
+    final finishedGoodState = ref.watch(finishedGoodProvider);
     final inboundState = ref.watch(inboundProvider);
     final outboundState = ref.watch(outboundProvider);
     final activityState = ref.watch(activityProvider);
+    final settingsState = ref.watch(settingsProvider);
     final colorScheme = Theme.of(context).colorScheme;
 
     // 1. Calculate Bento Grid Summary
-    final activeProducts = inventoryState.products;
-    final totalSku = activeProducts.length;
-    final totalUnits = activeProducts.fold(0.0, (sum, p) => sum + p.currentStock);
+    final activeRawMaterials = rawMaterialState.rawMaterials;
+    final activeFinishedGoods = finishedGoodState.finishedGoods;
+    final totalSku = activeRawMaterials.length + activeFinishedGoods.length;
+    final totalUnits = activeRawMaterials.fold(0.0, (sum, m) => sum + m.currentStock) +
+                       activeFinishedGoods.fold(0.0, (sum, f) => sum + f.currentStock);
 
     // 2. Calculate Today's Inbound / Outbound Transactions
     final allInbounds = inboundState.records;
@@ -91,25 +99,21 @@ class DashboardScreen extends ConsumerWidget {
       appBar: AppBar(
         leading: Padding(
           padding: const EdgeInsets.only(left: 12),
-          child: CircleAvatar(
-            backgroundColor: colorScheme.surfaceVariant,
-            child: const Icon(Icons.person, color: Color(0xFF006E2F)),
+          child: ProfileAvatar(
+            imagePath: settingsState.profileImagePath,
+            name: settingsState.profileName,
+            radius: 20,
           ),
         ),
-        title: const Text('Halo, Admin Gudang'),
-        actions: [
-          IconButton(
-            onPressed: () {
-              // Notification placeholder
-            },
-            icon: const Icon(Icons.notifications_none),
-            color: colorScheme.primary,
-          ),
+        title: Text('Halo, ${settingsState.profileName}'),
+        actions: const [
+          ThemeToggleButton(),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          ref.read(inventoryProvider.notifier).loadProducts();
+          ref.read(rawMaterialProvider.notifier).loadRawMaterials();
+          ref.read(finishedGoodProvider.notifier).loadFinishedGoods();
           ref.read(inboundProvider.notifier).loadInboundRecords();
           ref.read(outboundProvider.notifier).loadOutboundRecords();
           ref.read(activityProvider.notifier).loadActivityRecords();

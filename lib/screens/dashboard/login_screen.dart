@@ -214,6 +214,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget _buildKeyboardButton(String num) {
     final authState = ref.read(authProvider);
     final isLocked = authState.isLocked;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return InkWell(
       onTap: isLocked ? null : () => _onNumberPressed(num),
@@ -224,11 +225,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: isLocked ? Colors.grey[100] : Colors.white,
-          border: Border.all(color: Colors.grey[200]!),
+          color: isLocked ? colorScheme.surfaceVariant.withValues(alpha: 0.5) : colorScheme.surfaceVariant,
+          border: Border.all(color: colorScheme.outlineVariant),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.02),
+              color: Colors.black.withValues(alpha: 0.02),
               blurRadius: 4,
               offset: const Offset(0, 2),
             ),
@@ -239,7 +240,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.bold,
-            color: isLocked ? Colors.grey : Colors.black,
+            color: isLocked ? colorScheme.onSurfaceVariant.withValues(alpha: 0.5) : colorScheme.onSurface,
           ),
         ),
       ),

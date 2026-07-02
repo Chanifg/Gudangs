@@ -8,6 +8,10 @@ import '../models/finished_good.dart';
 import '../services/database_service.dart';
 import 'raw_material_provider.dart';
 import 'finished_good_provider.dart';
+import 'stock_movement_provider.dart';
+import 'audit_log_provider.dart';
+import 'auth_provider.dart';
+import '../core/formatters.dart';
 
 class ProductionState {
   final List<ProductionRecord> records;
@@ -77,10 +81,16 @@ class ProductionNotifier extends StateNotifier<ProductionState> {
   final Ref _ref;
 
   ProductionNotifier(this._ref) : super(ProductionState(records: [])) {
+    _ref.listen<AuthState>(authProvider, (previous, next) {
+      if (next.isAuthenticated) {
+        loadProductionRecords();
+      }
+    });
     loadProductionRecords();
   }
 
   void loadProductionRecords() {
+    if (!DatabaseService.isOperationalOpen) return;
     state = state.copyWith(isLoading: true);
     var allRecords = DatabaseService.productionBox.values.toList();
 
@@ -239,14 +249,43 @@ class ProductionNotifier extends StateNotifier<ProductionState> {
 
       // 3. Atomically write changes (save list)
       for (final rawMat in updatedMaterials) {
+        final double prevStock = rawMat.currentStock + (compQtyPerUnit(bom, rawMat.id) * quantityProduced);
         await rawMat.save();
+
+        // Log Stock Movement for raw material deduction
+        await _ref.read(stockMovementProvider.notifier).logMovement(
+          itemId: rawMat.id,
+          itemName: rawMat.name,
+          itemType: 'raw_material',
+          type: 'production_out',
+          quantity: compQtyPerUnit(bom, rawMat.id) * quantityProduced,
+          previousStock: prevStock,
+          newStock: rawMat.currentStock,
+          unitCost: rawMat.defaultUnitCost,
+          notes: 'Dihabiskan untuk produksi batch ${bom.name}',
+        );
       }
 
+      final double prevProductStock = finishedGood.currentStock;
+      
       // Update finished good
       finishedGood.currentStock += quantityProduced;
       finishedGood.lastHPP = hpp;
       finishedGood.updatedAt = now;
       await finishedGood.save();
+
+      // Log Stock Movement for finished good addition
+      await _ref.read(stockMovementProvider.notifier).logMovement(
+        itemId: finishedGood.id,
+        itemName: finishedGood.name,
+        itemType: 'product',
+        type: 'production_in',
+        quantity: quantityProduced,
+        previousStock: prevProductStock,
+        newStock: finishedGood.currentStock,
+        unitCost: hpp,
+        notes: 'Hasil produksi batch ${bom.name}',
+      );
 
       // Save ProductionRecord
       final record = ProductionRecord(
@@ -266,6 +305,12 @@ class ProductionNotifier extends StateNotifier<ProductionState> {
 
       await DatabaseService.productionBox.put(recordId, record);
 
+      // Log Audit Trail
+      await _ref.read(auditLogProvider.notifier).logActivity(
+        action: 'PRODUKSI_BARANG_JADI',
+        description: 'Mengeksekusi produksi barang jadi ${finishedGood.name} (Jumlah: $quantityProduced ${finishedGood.unit}, HPP/Unit: ${Formatters.formatRupiah(hpp)}, Total Biaya Bahan: ${Formatters.formatRupiah(totalMaterialCost)})',
+      );
+
       // 4. Refresh providers
       loadProductionRecords();
       _ref.read(rawMaterialProvider.notifier).loadRawMaterials();
@@ -275,6 +320,14 @@ class ProductionNotifier extends StateNotifier<ProductionState> {
     } catch (e) {
       state = state.copyWith(errorMessage: 'Gagal mengeksekusi produksi: $e');
       return false;
+    }
+  }
+
+  double compQtyPerUnit(BillOfMaterials bom, String materialId) {
+    try {
+      return bom.components.firstWhere((comp) => comp.rawMaterialId == materialId).quantityPerUnit;
+    } catch (_) {
+      return 0.0;
     }
   }
 

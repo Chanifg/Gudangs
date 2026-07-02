@@ -11,6 +11,41 @@ class FinishedGoodDetailScreen extends ConsumerWidget {
 
   const FinishedGoodDetailScreen({super.key, required this.finishedGoodId});
 
+  List<Map<String, dynamic>> _getStockHistory(String finishedGoodId) {
+    if (!DatabaseService.isOperationalOpen) return [];
+    final List<Map<String, dynamic>> history = [];
+
+    // Fetch unified Stock Movements for this product
+    final movements = DatabaseService.stockMovementsBox.values
+        .where((m) => m.itemId == finishedGoodId && m.itemType == 'product')
+        .toList();
+
+    // Sort by date descending
+    movements.sort((a, b) => b.date.compareTo(a.date));
+
+    for (final m in movements) {
+      final isIncoming = m.type == 'inbound' || m.type == 'production_in' || m.type == 'adjustment_add';
+      String title = 'Koreksi Stok';
+      if (m.type == 'inbound') title = 'Barang Masuk';
+      if (m.type == 'production_in') title = 'Hasil Produksi';
+      if (m.type == 'outbound') title = 'Barang Keluar';
+      if (m.type == 'adjustment_add') title = 'Koreksi (Tambah)';
+      if (m.type == 'adjustment_sub') title = 'Koreksi (Kurang)';
+      if (m.type == 'opname') title = 'Stock Opname';
+
+      history.add({
+        'type': m.type,
+        'quantity': m.quantity,
+        'date': m.date,
+        'title': title,
+        'subtitle': m.notes ?? '',
+        'isIncoming': isIncoming,
+      });
+    }
+
+    return history;
+  }
+
   void _confirmDelete(BuildContext context, WidgetRef ref, FinishedGood finishedGood) {
     showDialog(
       context: context,
@@ -68,11 +103,19 @@ class FinishedGoodDetailScreen extends ConsumerWidget {
     }
 
     final isStockOut = finishedGood.currentStock <= 0;
+    final history = _getStockHistory(finishedGoodId);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(finishedGood.name),
+        title: const Text('Detail Barang Jadi'),
         actions: [
+          IconButton(
+            onPressed: () {
+              context.push('/more/stock-adjustment?itemId=${finishedGood.id}&itemType=product');
+            },
+            icon: const Icon(Icons.tune),
+            tooltip: 'Sesuaikan Stok',
+          ),
           IconButton(
             onPressed: () {
               context.push('/inventory/finished-goods/${finishedGood.id}/edit');
@@ -87,109 +130,175 @@ class FinishedGoodDetailScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Visual Product Header Card
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  CircleAvatar(
-                    radius: 36,
-                    backgroundColor: colorScheme.primary.withValues(alpha: 0.1),
-                    child: Icon(Icons.inventory_2, size: 40, color: colorScheme.primary),
+          Container(
+            color: colorScheme.surface,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                CircleAvatar(
+                  radius: 32,
+                  backgroundColor: colorScheme.primary.withOpacity(0.1),
+                  child: Icon(Icons.inventory_2, size: 36, color: colorScheme.primary),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  finishedGood.name,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'SKU: ${finishedGood.sku}',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isStockOut
+                        ? const Color(0xFFBA1A1A).withOpacity(0.1)
+                        : const Color(0xFF006E2F).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    finishedGood.name,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'SKU: ${finishedGood.sku}',
-                    style: const TextStyle(fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: isStockOut
-                          ? const Color(0xFFBA1A1A).withValues(alpha: 0.1)
-                          : const Color(0xFF006E2F).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
+                  child: Text(
+                    isStockOut ? 'STOK HABIS' : 'STOK TERSEDIA',
+                    style: TextStyle(
+                      color: isStockOut ? const Color(0xFFBA1A1A) : const Color(0xFF006E2F),
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
                     ),
-                    child: Text(
-                      isStockOut ? 'STOK HABIS' : 'STOK TERSEDIA',
-                      style: TextStyle(
-                        color: isStockOut ? const Color(0xFFBA1A1A) : const Color(0xFF006E2F),
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
                   ),
-                ],
+                ),
+              ],
+            ),
+          ),
+
+          // Detail Info
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    _buildDetailRow(
+                      label: 'Stok Saat Ini',
+                      value: '${finishedGood.currentStock} ${finishedGood.unit}',
+                      valueColor: isStockOut ? const Color(0xFFBA1A1A) : colorScheme.onSurface,
+                      isBold: true,
+                    ),
+                    const Divider(height: 20),
+                    _buildDetailRow(
+                      label: 'Satuan',
+                      value: finishedGood.unit,
+                    ),
+                    const Divider(height: 20),
+                    _buildDetailRow(
+                      label: 'Harga Jual Standard',
+                      value: Formatters.formatRupiah(finishedGood.defaultUnitPrice),
+                      isBold: true,
+                    ),
+                    const Divider(height: 20),
+                    _buildDetailRow(
+                      label: 'Estimasi HPP Terakhir',
+                      value: finishedGood.lastHPP != null
+                          ? Formatters.formatRupiah(finishedGood.lastHPP!)
+                          : 'Belum diproduksi',
+                      valueColor: finishedGood.lastHPP != null ? const Color(0xFF006E2F) : Colors.grey,
+                      isBold: finishedGood.lastHPP != null,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-          const SizedBox(height: 16),
 
-          // Detail Information Card
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Detail Barang',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0B1C30)),
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  _buildDetailRow(
-                    label: 'Stok Saat Ini',
-                    value: '${finishedGood.currentStock} ${finishedGood.unit}',
-                    valueColor: isStockOut ? const Color(0xFFBA1A1A) : const Color(0xFF0B1C30),
-                    isBold: true,
-                  ),
-                  const Divider(height: 24),
-                  _buildDetailRow(
-                    label: 'Satuan',
-                    value: finishedGood.unit,
-                  ),
-                  const Divider(height: 24),
-                  _buildDetailRow(
-                    label: 'Harga Jual Standard',
-                    value: Formatters.formatRupiah(finishedGood.defaultUnitPrice),
-                    valueColor: const Color(0xFF0B1C30),
-                    isBold: true,
-                  ),
-                  const Divider(height: 24),
-                  _buildDetailRow(
-                    label: 'Estimasi HPP Terakhir',
-                    value: finishedGood.lastHPP != null
-                        ? Formatters.formatRupiah(finishedGood.lastHPP!)
-                        : 'Belum diproduksi',
-                    valueColor: finishedGood.lastHPP != null ? const Color(0xFF006E2F) : Colors.grey,
-                    isBold: finishedGood.lastHPP != null,
-                  ),
-                  const Divider(height: 24),
-                  _buildDetailRow(
-                    label: 'Tanggal Ditambahkan',
-                    value: Formatters.formatDate(finishedGood.createdAt),
-                  ),
-                  const Divider(height: 24),
-                  _buildDetailRow(
-                    label: 'Pembaruan Terakhir',
-                    value: Formatters.formatDate(finishedGood.updatedAt),
-                  ),
-                ],
-              ),
+          // History Section
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 4),
+            child: Text(
+              'Riwayat Transaksi Stok',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
             ),
+          ),
+
+          Expanded(
+            child: history.isEmpty
+                ? const Center(
+                    child: Text(
+                      'Belum ada riwayat transaksi untuk barang jadi ini.',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    itemCount: history.length,
+                    separatorBuilder: (context, index) => Divider(height: 1, color: colorScheme.outlineVariant),
+                    itemBuilder: (context, index) {
+                      final item = history[index];
+                      final isIncoming = item['isIncoming'] as bool;
+                      
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 10.0),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: isIncoming ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                isIncoming ? Icons.arrow_downward : Icons.arrow_upward,
+                                color: isIncoming ? Colors.green : Colors.red,
+                                size: 16,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item['title'] as String,
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    item['subtitle'] as String,
+                                    style: const TextStyle(color: Colors.grey, fontSize: 11),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  '${isIncoming ? "+" : "-"}${item['quantity'].toStringAsFixed(item['quantity'] % 1 == 0 ? 0 : 1)}',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: isIncoming ? Colors.green : Colors.red,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  Formatters.formatDate(item['date'] as DateTime),
+                                  style: const TextStyle(fontSize: 10, color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
@@ -214,7 +323,7 @@ class FinishedGoodDetailScreen extends ConsumerWidget {
           style: TextStyle(
             fontSize: 13,
             fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-            color: valueColor ?? const Color(0xFF0B1C30),
+            color: valueColor,
           ),
         ),
       ],

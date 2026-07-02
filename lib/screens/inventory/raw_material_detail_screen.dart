@@ -10,39 +10,36 @@ class RawMaterialDetailScreen extends ConsumerWidget {
   const RawMaterialDetailScreen({super.key, required this.materialId});
 
   List<Map<String, dynamic>> _getStockHistory(String materialId) {
+    if (!DatabaseService.isOperationalOpen) return [];
     final List<Map<String, dynamic>> history = [];
 
-    // Fetch Inbound Records (Raw Material Incoming)
-    final inbounds = DatabaseService.inboundBox.values
-        .where((rec) => rec.productId == materialId)
+    // Fetch unified Stock Movements for this raw material
+    final movements = DatabaseService.stockMovementsBox.values
+        .where((m) => m.itemId == materialId && m.itemType == 'raw_material')
         .toList();
-    for (final rec in inbounds) {
-      history.add({
-        'type': 'inbound',
-        'quantity': rec.quantity,
-        'date': rec.date,
-        'title': 'Bahan Baku Masuk',
-        'subtitle': rec.notes ?? 'Penerimaan bahan baku',
-      });
-    }
-
-    // Fetch Production Usage (Raw Material Outgoing)
-    final productions = DatabaseService.productionBox.values
-        .where((prod) => prod.materialsUsed.any((mu) => mu.rawMaterialId == materialId))
-        .toList();
-    for (final prod in productions) {
-      final usage = prod.materialsUsed.firstWhere((mu) => mu.rawMaterialId == materialId);
-      history.add({
-        'type': 'production_usage',
-        'quantity': usage.quantityUsed,
-        'date': prod.date,
-        'title': 'Dipakai Produksi',
-        'subtitle': 'Produksi: ${prod.finishedGoodName}',
-      });
-    }
 
     // Sort by date descending
-    history.sort((a, b) => (b['date'] as DateTime).compareTo(a['date'] as DateTime));
+    movements.sort((a, b) => b.date.compareTo(a.date));
+
+    for (final m in movements) {
+      final isIncoming = m.type == 'inbound' || m.type == 'production_in' || m.type == 'adjustment_add';
+      String title = 'Koreksi Stok';
+      if (m.type == 'inbound') title = 'Bahan Baku Masuk';
+      if (m.type == 'production_out') title = 'Dipakai Produksi';
+      if (m.type == 'adjustment_add') title = 'Koreksi (Tambah)';
+      if (m.type == 'adjustment_sub') title = 'Koreksi (Kurang)';
+      if (m.type == 'opname') title = 'Stock Opname';
+
+      history.add({
+        'type': m.type,
+        'quantity': m.quantity,
+        'date': m.date,
+        'title': title,
+        'subtitle': m.notes ?? '',
+        'isIncoming': isIncoming,
+      });
+    }
+
     return history;
   }
 
@@ -62,6 +59,13 @@ class RawMaterialDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Detail Bahan Baku'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.tune),
+            tooltip: 'Sesuaikan Stok',
+            onPressed: () {
+              context.push('/more/stock-adjustment?itemId=$materialId&itemType=raw_material');
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.edit_outlined),
             onPressed: () {
@@ -110,7 +114,7 @@ class RawMaterialDetailScreen extends ConsumerWidget {
         children: [
           // Info Card
           Container(
-            color: Colors.white,
+            color: colorScheme.surface,
             padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -145,7 +149,7 @@ class RawMaterialDetailScreen extends ConsumerWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
+                        color: colorScheme.surfaceVariant,
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
@@ -188,7 +192,7 @@ class RawMaterialDetailScreen extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'HARGA BELI DEFAULT',
+                            'HARGA BELI DEFAULT (WAC)',
                             style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
                           ),
                           const SizedBox(height: 4),
@@ -228,10 +232,10 @@ class RawMaterialDetailScreen extends ConsumerWidget {
                 : ListView.separated(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     itemCount: history.length,
-                    separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                    separatorBuilder: (context, index) => Divider(height: 1, color: colorScheme.outlineVariant),
                     itemBuilder: (context, index) {
                       final item = history[index];
-                      final isIncoming = item['type'] == 'inbound';
+                      final isIncoming = item['isIncoming'] as bool;
                       
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 12.0),

@@ -22,13 +22,14 @@ class JobTypeAdapter extends TypeAdapter<JobType> {
       ratePerUnit: fields[2] as double,
       createdAt: fields[3] as DateTime,
       updatedAt: fields[4] as DateTime,
+      isDeleted: fields[5] as bool?,
     );
   }
 
   @override
   void write(BinaryWriter writer, JobType obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -38,7 +39,9 @@ class JobTypeAdapter extends TypeAdapter<JobType> {
       ..writeByte(3)
       ..write(obj.createdAt)
       ..writeByte(4)
-      ..write(obj.updatedAt);
+      ..write(obj.updatedAt)
+      ..writeByte(5)
+      ..write(obj.isDeleted);
   }
 
   @override

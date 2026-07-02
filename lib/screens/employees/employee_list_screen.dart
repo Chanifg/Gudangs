@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/employee_provider.dart';
+import '../../providers/settings_provider.dart';
+import '../../widgets/profile_avatar.dart';
+import '../../widgets/theme_toggle_button.dart';
 
 class EmployeeListScreen extends ConsumerWidget {
   const EmployeeListScreen({super.key});
@@ -9,24 +12,22 @@ class EmployeeListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final employeeState = ref.watch(employeeProvider);
+    final settingsState = ref.watch(settingsProvider);
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
         leading: Padding(
           padding: const EdgeInsets.only(left: 12),
-          child: CircleAvatar(
-            backgroundColor: colorScheme.surfaceVariant,
-            child: const Icon(Icons.person, color: Color(0xFF006E2F)),
+          child: ProfileAvatar(
+            imagePath: settingsState.profileImagePath,
+            name: settingsState.profileName,
+            radius: 20,
           ),
         ),
-        title: const Text('Halo, Admin Gudang'),
-        actions: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.notifications_none),
-            color: colorScheme.primary,
-          ),
+        title: Text('Halo, ${settingsState.profileName}'),
+        actions: const [
+          ThemeToggleButton(),
         ],
       ),
       body: Column(
@@ -60,28 +61,25 @@ class EmployeeListScreen extends ConsumerWidget {
                 // Filter Active / Inactive Tab Buttons
                 Row(
                   children: [
-                    FilterChip(
-                      label: const Text('Semua'),
-                      selected: employeeState.filterActive == null,
-                      onSelected: (_) => ref.read(employeeProvider.notifier).setFilterActive(null),
-                      selectedColor: colorScheme.primaryContainer.withOpacity(0.15),
-                      checkmarkColor: colorScheme.primary,
+                    _buildFilterButton(
+                      context: context,
+                      label: 'Semua',
+                      isSelected: employeeState.filterActive == null,
+                      onTap: () => ref.read(employeeProvider.notifier).setFilterActive(null),
                     ),
                     const SizedBox(width: 8),
-                    FilterChip(
-                      label: const Text('Aktif'),
-                      selected: employeeState.filterActive == true,
-                      onSelected: (_) => ref.read(employeeProvider.notifier).setFilterActive(true),
-                      selectedColor: colorScheme.primaryContainer.withOpacity(0.15),
-                      checkmarkColor: colorScheme.primary,
+                    _buildFilterButton(
+                      context: context,
+                      label: 'Aktif',
+                      isSelected: employeeState.filterActive == true,
+                      onTap: () => ref.read(employeeProvider.notifier).setFilterActive(true),
                     ),
                     const SizedBox(width: 8),
-                    FilterChip(
-                      label: const Text('Nonaktif'),
-                      selected: employeeState.filterActive == false,
-                      onSelected: (_) => ref.read(employeeProvider.notifier).setFilterActive(false),
-                      selectedColor: colorScheme.primaryContainer.withOpacity(0.15),
-                      checkmarkColor: colorScheme.primary,
+                    _buildFilterButton(
+                      context: context,
+                      label: 'Nonaktif',
+                      isSelected: employeeState.filterActive == false,
+                      onTap: () => ref.read(employeeProvider.notifier).setFilterActive(false),
                     ),
                   ],
                 ),
@@ -148,7 +146,7 @@ class EmployeeListScreen extends ConsumerWidget {
                                             emp.fullName,
                                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                                   fontWeight: FontWeight.bold,
-                                                  color: emp.isActive ? Colors.black : Colors.grey[600],
+                                                  color: emp.isActive ? colorScheme.onSurface : Colors.grey[600],
                                                 ),
                                           ),
                                           const SizedBox(height: 4),
@@ -221,6 +219,38 @@ class EmployeeListScreen extends ConsumerWidget {
           context.push('/employees/add');
         },
         child: const Icon(Icons.add, size: 28),
+      ),
+    );
+  }
+
+  Widget _buildFilterButton({
+    required BuildContext context,
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? colorScheme.primary : colorScheme.surfaceVariant,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? colorScheme.primary : colorScheme.outlineVariant,
+            width: 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            fontSize: 13,
+          ),
+        ),
       ),
     );
   }

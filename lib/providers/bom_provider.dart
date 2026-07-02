@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/bill_of_materials.dart';
 import '../services/database_service.dart';
+import 'audit_log_provider.dart';
+import 'auth_provider.dart';
 
 class BOMState {
   final List<BillOfMaterials> boms;
@@ -32,11 +34,19 @@ class BOMState {
 }
 
 class BOMNotifier extends StateNotifier<BOMState> {
-  BOMNotifier() : super(BOMState(boms: [])) {
+  final Ref ref;
+
+  BOMNotifier(this.ref) : super(BOMState(boms: [])) {
+    ref.listen<AuthState>(authProvider, (previous, next) {
+      if (next.isAuthenticated) {
+        loadBOMs();
+      }
+    });
     loadBOMs();
   }
 
   void loadBOMs() {
+    if (!DatabaseService.isOperationalOpen) return;
     state = state.copyWith(isLoading: true);
     final allBoms = DatabaseService.bomBox.values.toList();
 
@@ -101,6 +111,13 @@ class BOMNotifier extends StateNotifier<BOMState> {
     );
 
     await DatabaseService.bomBox.put(id, bom);
+
+    // Log Audit Trail
+    await ref.read(auditLogProvider.notifier).logActivity(
+      action: 'TAMBAH_BOM',
+      description: 'Menambahkan formula BOM baru: ${bom.name} untuk produk ${bom.finishedGoodName}',
+    );
+
     loadBOMs();
     return true;
   }
@@ -121,11 +138,19 @@ class BOMNotifier extends StateNotifier<BOMState> {
       return false;
     }
 
+    final oldName = bom.name;
     bom.name = name.trim();
     bom.components = components;
     bom.updatedAt = DateTime.now();
 
     await bom.save();
+
+    // Log Audit Trail
+    await ref.read(auditLogProvider.notifier).logActivity(
+      action: 'EDIT_BOM',
+      description: 'Mengubah formula BOM: $oldName -> ${bom.name}',
+    );
+
     loadBOMs();
     return true;
   }
@@ -134,9 +159,17 @@ class BOMNotifier extends StateNotifier<BOMState> {
     final bom = DatabaseService.bomBox.get(id);
     if (bom == null) return false;
 
-    // Validate that BOM can be deleted (e.g. check if used in recent productions? SRS doesn't block it, but just says warn/confirm)
-    // Wait, FR-11.3: "tidak dapat dihapus jika ada produksi aktif" -> Wait, Gudangs is offline-first, production is synchronous and not "active/running" in background. Once completed, it's recorded. So there's no "active production" in terms of background tasks.
+    final name = bom.name;
+    final finishedGoodName = bom.finishedGoodName;
+
     await bom.delete();
+
+    // Log Audit Trail
+    await ref.read(auditLogProvider.notifier).logActivity(
+      action: 'HAPUS_BOM',
+      description: 'Menghapus formula BOM: $name (Produk: $finishedGoodName)',
+    );
+
     loadBOMs();
     return true;
   }
@@ -147,5 +180,5 @@ class BOMNotifier extends StateNotifier<BOMState> {
 }
 
 final bomProvider = StateNotifierProvider<BOMNotifier, BOMState>((ref) {
-  return BOMNotifier();
+  return BOMNotifier(ref);
 });

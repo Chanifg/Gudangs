@@ -20,19 +20,34 @@ class AppSettingsAdapter extends TypeAdapter<AppSettings> {
       pinHash: fields[0] as String?,
       isBiometricEnabled: fields[1] as bool,
       appVersion: fields[2] as String,
+      profileName: fields[3] as String?,
+      profilePhone: fields[4] as String?,
+      profileCompanyName: fields[5] as String?,
+      profileImagePath: fields[6] as String?,
+      themeMode: fields[7] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, AppSettings obj) {
     writer
-      ..writeByte(3)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.pinHash)
       ..writeByte(1)
       ..write(obj.isBiometricEnabled)
       ..writeByte(2)
-      ..write(obj.appVersion);
+      ..write(obj.appVersion)
+      ..writeByte(3)
+      ..write(obj.profileName)
+      ..writeByte(4)
+      ..write(obj.profilePhone)
+      ..writeByte(5)
+      ..write(obj.profileCompanyName)
+      ..writeByte(6)
+      ..write(obj.profileImagePath)
+      ..writeByte(7)
+      ..write(obj.themeMode);
   }
 
   @override

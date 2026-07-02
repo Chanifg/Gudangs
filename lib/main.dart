@@ -4,6 +4,9 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'services/database_service.dart';
 import 'core/router.dart';
 import 'core/theme.dart';
+import 'widgets/lifecycle_watcher.dart';
+import 'widgets/inactivity_watcher.dart';
+import 'providers/theme_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,11 +29,20 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return MaterialApp.router(
-      title: 'Gudangs',
-      theme: AppTheme.lightTheme,
-      routerConfig: router,
-      debugShowCheckedModeBanner: false,
+    final router = ref.watch(routerProvider);
+    final themeMode = ref.watch(themeProvider);
+
+    return LifecycleWatcher(
+      child: InactivityWatcher(
+        child: MaterialApp.router(
+          title: 'Gudangs',
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: themeMode,
+          routerConfig: router,
+          debugShowCheckedModeBanner: false,
+        ),
+      ),
     );
   }
 }
