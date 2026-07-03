@@ -84,87 +84,72 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     final filteredOutbounds = allOutbounds.where((r) => r.date.isAfter(range.start.subtract(const Duration(seconds: 1))) && r.date.isBefore(range.end.add(const Duration(seconds: 1)))).toList();
     final filteredActivities = allActivities.where((r) => r.date.isAfter(range.start.subtract(const Duration(seconds: 1))) && r.date.isBefore(range.end.add(const Duration(seconds: 1)))).toList();
 
-    // Check if we should fall back to mockup data (if there are no real transactions)
-    final bool useMockup = filteredInbounds.isEmpty && filteredOutbounds.isEmpty && filteredActivities.isEmpty;
+
 
     // 2. Calculations
-    double grossMargin = 24.5;
-    double avgInbound = 142;
-    double avgOutbound = 98;
-    double totalInboundCost = 68000000;
-    double totalOutboundValue = 90000000;
+    double grossMargin = 0.0;
+    double avgInbound = 0.0;
+    double avgOutbound = 0.0;
+    double totalInboundCost = 0.0;
+    double totalOutboundValue = 0.0;
 
     List<EmployeeStatsItem> employeeStats = [];
     List<PopularProductItem> popularProducts = [];
 
-    if (!useMockup) {
-      totalInboundCost = filteredInbounds.fold(0.0, (sum, r) => sum + r.totalCost);
-      totalOutboundValue = filteredOutbounds.where((r) => r.status != OutboundStatus.dibatalkan).fold(0.0, (sum, r) => sum + r.totalValue);
+    totalInboundCost = filteredInbounds.fold(0.0, (sum, r) => sum + r.totalCost);
+    totalOutboundValue = filteredOutbounds.where((r) => r.status != OutboundStatus.dibatalkan).fold(0.0, (sum, r) => sum + r.totalValue);
 
-      if (totalOutboundValue > 0) {
-        grossMargin = ((totalOutboundValue - totalInboundCost) / totalOutboundValue) * 100;
-      } else {
-        grossMargin = totalInboundCost > 0 ? -100.0 : 0.0;
-      }
-
-      final days = range.end.difference(range.start).inDays + 1;
-      final double totalInboundUnits = filteredInbounds.fold(0.0, (sum, r) => sum + r.quantity);
-      final double totalOutboundUnits = filteredOutbounds.where((r) => r.status != OutboundStatus.dibatalkan).fold(0.0, (sum, r) => sum + r.quantity);
-
-      avgInbound = days > 0 ? totalInboundUnits / days : totalInboundUnits;
-      avgOutbound = days > 0 ? totalOutboundUnits / days : totalOutboundUnits;
-
-      // Group activities by employee
-      final Map<String, int> empActivityCount = {};
-      final Map<String, String> empNames = {};
-      for (final act in filteredActivities) {
-        empActivityCount[act.employeeId] = (empActivityCount[act.employeeId] ?? 0) + 1;
-        empNames[act.employeeId] = act.employeeName;
-      }
-
-      final sortedEmpIds = empActivityCount.keys.toList()..sort((a, b) => empActivityCount[b]!.compareTo(empActivityCount[a]!));
-      int maxAct = sortedEmpIds.isNotEmpty ? empActivityCount[sortedEmpIds.first]! : 1;
-
-      employeeStats = sortedEmpIds.map((id) {
-        final name = empNames[id]!;
-        final count = empActivityCount[id]!;
-        final progress = maxAct > 0 ? count / maxAct : 0.0;
-        return EmployeeStatsItem(name: name, count: count, progress: progress);
-      }).toList();
-
-      // Group outbound quantities by product
-      final Map<String, double> prodOutboundQty = {};
-      final Map<String, String> prodNames = {};
-      final Map<String, String> prodSkus = {};
-      for (final ob in filteredOutbounds) {
-        if (ob.status != OutboundStatus.dibatalkan) {
-          prodOutboundQty[ob.productId] = (prodOutboundQty[ob.productId] ?? 0.0) + ob.quantity;
-          prodNames[ob.productId] = ob.productName;
-          prodSkus[ob.productId] = ob.productSku;
-        }
-      }
-
-      final sortedProdIds = prodOutboundQty.keys.toList()..sort((a, b) => prodOutboundQty[b]!.compareTo(prodOutboundQty[a]!));
-      popularProducts = sortedProdIds.map((id) {
-        return PopularProductItem(
-          name: prodNames[id]!,
-          sku: prodSkus[id]!,
-          quantity: prodOutboundQty[id]!,
-        );
-      }).toList();
+    if (totalOutboundValue > 0) {
+      grossMargin = ((totalOutboundValue - totalInboundCost) / totalOutboundValue) * 100;
     } else {
-      // Setup Mockup Employee & Product Stats
-      employeeStats = [
-        EmployeeStatsItem(name: 'Budi Santoso', count: 120, progress: 0.85),
-        EmployeeStatsItem(name: 'Ani Lestari', count: 108, progress: 0.72),
-        EmployeeStatsItem(name: 'Dedi Wijaya', count: 95, progress: 0.60),
-      ];
-      popularProducts = [
-        PopularProductItem(name: 'Beras Premium 5kg', sku: 'BRS-PRM-05', quantity: 124),
-        PopularProductItem(name: 'Minyak Goreng 2L', sku: 'MYK-GRG-02', quantity: 98),
-        PopularProductItem(name: 'Tepung Terigu 1kg', sku: 'TPG-TRG-01', quantity: 75),
-      ];
+      grossMargin = totalInboundCost > 0 ? -100.0 : 0.0;
     }
+
+    final days = range.end.difference(range.start).inDays + 1;
+    final double totalInboundUnits = filteredInbounds.fold(0.0, (sum, r) => sum + r.quantity);
+    final double totalOutboundUnits = filteredOutbounds.where((r) => r.status != OutboundStatus.dibatalkan).fold(0.0, (sum, r) => sum + r.quantity);
+
+    avgInbound = days > 0 ? totalInboundUnits / days : totalInboundUnits;
+    avgOutbound = days > 0 ? totalOutboundUnits / days : totalOutboundUnits;
+
+    // Group activities by employee
+    final Map<String, int> empActivityCount = {};
+    final Map<String, String> empNames = {};
+    for (final act in filteredActivities) {
+      empActivityCount[act.employeeId] = (empActivityCount[act.employeeId] ?? 0) + 1;
+      empNames[act.employeeId] = act.employeeName;
+    }
+
+    final sortedEmpIds = empActivityCount.keys.toList()..sort((a, b) => empActivityCount[b]!.compareTo(empActivityCount[a]!));
+    int maxAct = sortedEmpIds.isNotEmpty ? empActivityCount[sortedEmpIds.first]! : 1;
+
+    employeeStats = sortedEmpIds.map((id) {
+      final name = empNames[id]!;
+      final count = empActivityCount[id]!;
+      final progress = maxAct > 0 ? count / maxAct : 0.0;
+      return EmployeeStatsItem(name: name, count: count, progress: progress);
+    }).toList();
+
+    // Group outbound quantities by product
+    final Map<String, double> prodOutboundQty = {};
+    final Map<String, String> prodNames = {};
+    final Map<String, String> prodSkus = {};
+    for (final ob in filteredOutbounds) {
+      if (ob.status != OutboundStatus.dibatalkan) {
+        prodOutboundQty[ob.productId] = (prodOutboundQty[ob.productId] ?? 0.0) + ob.quantity;
+        prodNames[ob.productId] = ob.productName;
+        prodSkus[ob.productId] = ob.productSku;
+      }
+    }
+
+    final sortedProdIds = prodOutboundQty.keys.toList()..sort((a, b) => prodOutboundQty[b]!.compareTo(prodOutboundQty[a]!));
+    popularProducts = sortedProdIds.map((id) {
+      return PopularProductItem(
+        name: prodNames[id]!,
+        sku: prodSkus[id]!,
+        quantity: prodOutboundQty[id]!,
+      );
+    }).toList();
 
     final dateRangeStr = '${Formatters.formatDate(range.start)} - ${Formatters.formatDate(range.end)}';
 
@@ -215,32 +200,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             ),
             const SizedBox(height: 16),
 
-            if (useMockup) ...[
-              Card(
-                color: colorScheme.primary.withValues(alpha: 0.05),
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: colorScheme.primary.withValues(alpha: 0.1)),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline, color: colorScheme.primary),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Menampilkan data simulasi (mockup) karena belum ada catatan transaksi pada rentang ini.',
-                          style: TextStyle(fontSize: 12, color: colorScheme.onSurface, height: 1.4),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
+
 
             // Bento Grid Summary Performance Cards
             Row(
@@ -461,7 +421,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                   SizedBox(
                     height: 160,
                     child: LineChart(
-                      _buildLineChartData(useMockup, filteredInbounds, filteredOutbounds, colorScheme),
+                      _buildLineChartData(filteredInbounds, filteredOutbounds, colorScheme),
                     ),
                   ),
                 ],
@@ -488,7 +448,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                   SizedBox(
                     height: 160,
                     child: BarChart(
-                      _buildBarChartData(useMockup, filteredInbounds, filteredOutbounds, colorScheme),
+                      _buildBarChartData(filteredInbounds, filteredOutbounds, colorScheme),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -797,7 +757,6 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
   }
 
   LineChartData _buildLineChartData(
-    bool useMockup,
     List<InboundRecord> inbounds,
     List<OutboundRecord> outbounds,
     ColorScheme colorScheme,
@@ -805,46 +764,43 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     List<FlSpot> inboundSpots = [];
     List<FlSpot> outboundSpots = [];
 
-    if (useMockup) {
-      inboundSpots = const [
-        FlSpot(0, 80),
-        FlSpot(1, 60),
-        FlSpot(2, 90),
-        FlSpot(3, 50),
-        FlSpot(4, 10),
-        FlSpot(5, 70),
-        FlSpot(6, 30),
-      ];
-      outboundSpots = const [
-        FlSpot(0, 100),
-        FlSpot(1, 110),
-        FlSpot(2, 70),
-        FlSpot(3, 90),
-        FlSpot(4, 110),
-        FlSpot(5, 50),
-        FlSpot(6, 80),
-      ];
-    } else {
-      // Group by weekday (1 = Monday, 7 = Sunday)
-      final Map<int, double> inQty = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0};
-      final Map<int, double> outQty = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0};
+    // Group by weekday (1 = Monday, 7 = Sunday)
+    final Map<int, double> inQty = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0};
+    final Map<int, double> outQty = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0};
 
-      for (final r in inbounds) {
-        inQty[r.date.weekday] = (inQty[r.date.weekday] ?? 0.0) + r.quantity;
-      }
-      for (final r in outbounds) {
-        if (r.status != OutboundStatus.dibatalkan) {
-          outQty[r.date.weekday] = (outQty[r.date.weekday] ?? 0.0) + r.quantity;
-        }
-      }
-
-      for (int i = 1; i <= 7; i++) {
-        inboundSpots.add(FlSpot((i - 1).toDouble(), inQty[i]!));
-        outboundSpots.add(FlSpot((i - 1).toDouble(), outQty[i]!));
+    for (final r in inbounds) {
+      inQty[r.date.weekday] = (inQty[r.date.weekday] ?? 0.0) + r.quantity;
+    }
+    for (final r in outbounds) {
+      if (r.status != OutboundStatus.dibatalkan) {
+        outQty[r.date.weekday] = (outQty[r.date.weekday] ?? 0.0) + r.quantity;
       }
     }
 
+    for (int i = 1; i <= 7; i++) {
+      inboundSpots.add(FlSpot((i - 1).toDouble(), inQty[i]!));
+      outboundSpots.add(FlSpot((i - 1).toDouble(), outQty[i]!));
+    }
+
     return LineChartData(
+      lineTouchData: LineTouchData(
+        touchTooltipData: LineTouchTooltipData(
+          getTooltipColor: (LineBarSpot touchedSpot) => const Color(0xFF1E293B),
+          tooltipBorder: BorderSide(color: colorScheme.primary, width: 1.5),
+          getTooltipItems: (List<LineBarSpot> touchedSpots) {
+            return touchedSpots.map((LineBarSpot touchedSpot) {
+              return LineTooltipItem(
+                '${touchedSpot.y.toStringAsFixed(0)} item',
+                const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              );
+            }).toList();
+          },
+        ),
+      ),
       gridData: const FlGridData(
         show: true,
         drawVerticalLine: false,
@@ -912,95 +868,72 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
       ],
     );
   }
-
   BarChartData _buildBarChartData(
-    bool useMockup,
     List<InboundRecord> inbounds,
     List<OutboundRecord> outbounds,
     ColorScheme colorScheme,
   ) {
     List<BarChartGroupData> barGroups = [];
 
-    if (useMockup) {
-      final mockData = [
-        {'day': 0, 'in': 12.0, 'out': 8.0},
-        {'day': 1, 'in': 15.0, 'out': 10.0},
-        {'day': 2, 'in': 8.0, 'out': 12.0},
-        {'day': 3, 'in': 18.0, 'out': 9.0},
-        {'day': 4, 'in': 20.0, 'out': 15.0},
-      ];
+    // Group by weekday (1=Sen, 7=Min) in Millions
+    final Map<int, double> inVal = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0};
+    final Map<int, double> outVal = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0};
 
-      barGroups = mockData.map((data) {
-        return BarChartGroupData(
-          x: (data['day'] as num).toInt(),
+    for (final r in inbounds) {
+      inVal[r.date.weekday] = (inVal[r.date.weekday] ?? 0.0) + (r.totalCost / 1000000);
+    }
+    for (final r in outbounds) {
+      if (r.status != OutboundStatus.dibatalkan) {
+        outVal[r.date.weekday] = (outVal[r.date.weekday] ?? 0.0) + (r.totalValue / 1000000);
+      }
+    }
+
+    for (int i = 1; i <= 7; i++) {
+      barGroups.add(
+        BarChartGroupData(
+          x: i - 1,
           barRods: [
             BarChartRodData(
-              toY: (data['in'] as num).toDouble(),
+              toY: inVal[i]!,
               color: colorScheme.primary,
-              width: 12,
+              width: 10,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(3),
                 topRight: Radius.circular(3),
               ),
             ),
             BarChartRodData(
-              toY: (data['out'] as num).toDouble(),
+              toY: outVal[i]!,
               color: colorScheme.primary.withValues(alpha: 0.3),
-              width: 12,
+              width: 10,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(3),
                 topRight: Radius.circular(3),
               ),
             ),
           ],
-        );
-      }).toList();
-    } else {
-      // Group by weekday (1=Sen, 5=Jum) in Millions
-      final Map<int, double> inVal = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
-      final Map<int, double> outVal = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
-
-      for (final r in inbounds) {
-        if (r.date.weekday <= 5) {
-          inVal[r.date.weekday] = (inVal[r.date.weekday] ?? 0.0) + (r.totalCost / 1000000);
-        }
-      }
-      for (final r in outbounds) {
-        if (r.status != OutboundStatus.dibatalkan && r.date.weekday <= 5) {
-          outVal[r.date.weekday] = (outVal[r.date.weekday] ?? 0.0) + (r.totalValue / 1000000);
-        }
-      }
-
-      for (int i = 1; i <= 5; i++) {
-        barGroups.add(
-          BarChartGroupData(
-            x: i - 1,
-            barRods: [
-              BarChartRodData(
-                toY: inVal[i]!,
-                color: colorScheme.primary,
-                width: 12,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(3),
-                  topRight: Radius.circular(3),
-                ),
-              ),
-              BarChartRodData(
-                toY: outVal[i]!,
-                color: colorScheme.primary.withValues(alpha: 0.3),
-                width: 12,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(3),
-                  topRight: Radius.circular(3),
-                ),
-              ),
-            ],
-          ),
-        );
-      }
+        ),
+      );
     }
 
     return BarChartData(
+      barTouchData: BarTouchData(
+        touchTooltipData: BarTouchTooltipData(
+          getTooltipColor: (BarChartGroupData group) => const Color(0xFF1E293B),
+          tooltipBorder: BorderSide(color: colorScheme.primary, width: 1.5),
+          getTooltipItem: (BarChartGroupData group, int groupIndex, BarChartRodData rod, int rodIndex) {
+            final String prefix = rodIndex == 0 ? 'Biaya Inbound' : 'Nilai Outbound';
+            return BarTooltipItem(
+              '$prefix\nRp ${rod.toY.toStringAsFixed(1)} Jt',
+              const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 11,
+              ),
+            );
+          },
+        ),
+      ),
       gridData: const FlGridData(show: false),
       titlesData: FlTitlesData(
         leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -1010,7 +943,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
           sideTitles: SideTitles(
             showTitles: true,
             getTitlesWidget: (val, meta) {
-              const days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum'];
+              const days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
               if (val >= 0 && val < days.length) {
                 return SideTitleWidget(
                   axisSide: meta.axisSide,
