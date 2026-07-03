@@ -231,60 +231,12 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  void _handleCheckForUpdate(BuildContext context, String currentVersion) async {
+  void _handleCheckForUpdate(BuildContext context, String currentVersion) {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => const Center(
-        child: Card(
-          child: Padding(
-            padding: EdgeInsets.all(20),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(width: 16),
-                Text('Memeriksa pembaruan...'),
-              ],
-            ),
-          ),
-        ),
-      ),
+      builder: (ctx) => _UpdateDialog(currentVersion: currentVersion),
     );
-
-    final updateInfo = await UpdateService.checkForUpdate(currentVersion);
-    
-    if (context.mounted) {
-      Navigator.pop(context); // Close loading dialog
-    }
-
-    if (updateInfo == null) {
-      if (context.mounted) {
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Sudah Terbaru'),
-            content: const Text('Aplikasi Anda sudah menggunakan versi terbaru.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-      }
-      return;
-    }
-
-    // New update found! Show release notes & download prompt
-    if (context.mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => _UpdateDialog(updateInfo: updateInfo),
-      );
-    }
   }
 
   @override
@@ -566,86 +518,193 @@ class SettingsScreen extends ConsumerWidget {
 }
 
 class _UpdateDialog extends StatefulWidget {
-  final UpdateInfo updateInfo;
+  final String currentVersion;
 
-  const _UpdateDialog({required this.updateInfo});
+  const _UpdateDialog({required this.currentVersion});
 
   @override
   State<_UpdateDialog> createState() => _UpdateDialogState();
 }
 
 class _UpdateDialogState extends State<_UpdateDialog> {
+  String _status = 'checking'; // 'checking', 'no_update', 'error', 'available', 'downloading', 'done'
+  UpdateInfo? _updateInfo;
   double? _downloadProgress;
+  String _errorMessage = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _checkForUpdate();
+  }
+
+  Future<void> _checkForUpdate() async {
+    try {
+      final info = await UpdateService.checkForUpdate(widget.currentVersion);
+      if (!mounted) return;
+      if (info == null) {
+        setState(() {
+          _status = 'no_update';
+        });
+      } else {
+        setState(() {
+          _status = 'available';
+          _updateInfo = info;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _status = 'error';
+        _errorMessage = e.toString();
+      });
+    }
+  }
+
+  Future<void> _startDownload() async {
+    if (_updateInfo == null) return;
+    setState(() {
+      _status = 'downloading';
+      _downloadProgress = 0.0;
+    });
+
+    final file = await UpdateService.downloadApk(
+      _updateInfo!.downloadUrl,
+      (progress) {
+        if (mounted) {
+          setState(() {
+            _downloadProgress = progress;
+          });
+        }
+      },
+    );
+
+    if (!mounted) return;
+
+    if (file != null) {
+      setState(() {
+        _status = 'done';
+      });
+      final success = await UpdateService.installApk(file.path);
+      if (!success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gagal memasang APK. Harap izinkan instalasi dari sumber tidak dikenal.')),
+        );
+      }
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    } else {
+      setState(() {
+        _status = 'error';
+        _errorMessage = 'Gagal mengunduh file pembaruan.';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final updateInfo = widget.updateInfo;
-    String status = 'Tersedia versi baru: ${updateInfo.latestVersion}\n\nCatatan Rilis:\n${updateInfo.releaseNotes}';
+    final colorScheme = Theme.of(context).colorScheme;
 
-    return AlertDialog(
-      title: const Text('Pembaruan Tersedia'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(status, style: const TextStyle(fontSize: 13)),
-          if (_downloadProgress != null) ...[
-            const SizedBox(height: 20),
-            LinearProgressIndicator(value: _downloadProgress),
-            const SizedBox(height: 8),
-            Center(
-              child: Text(
-                'Mengunduh: ${(_downloadProgress! * 100).toStringAsFixed(0)}%',
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-              ),
-            ),
+    if (_status == 'checking') {
+      return AlertDialog(
+        title: const Text('Memeriksa Pembaruan'),
+        content: const Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 16),
+            Text('Menghubungi server...'),
           ],
+        ),
+      );
+    }
+
+    if (_status == 'no_update') {
+      return AlertDialog(
+        title: const Text('Sudah Terbaru'),
+        content: const Text('Aplikasi Anda sudah menggunakan versi terbaru.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tutup'),
+          ),
         ],
-      ),
-      actions: _downloadProgress != null
-          ? []
-          : [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Nanti'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  setState(() {
-                    _downloadProgress = 0.0;
-                  });
+      );
+    }
 
-                  final file = await UpdateService.downloadApk(
-                    updateInfo.downloadUrl,
-                    (progress) {
-                      setState(() {
-                        _downloadProgress = progress;
-                      });
-                    },
-                  );
+    if (_status == 'error') {
+      return AlertDialog(
+        title: const Text('Pemeriksaan Gagal'),
+        content: Text(_errorMessage.isNotEmpty ? _errorMessage : 'Terjadi kesalahan koneksi saat memeriksa pembaruan.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tutup'),
+          ),
+        ],
+      );
+    }
 
-                  if (file != null) {
-                    final success = await UpdateService.installApk(file.path);
-                    if (!success && context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Gagal memasang APK. Harap izinkan instalasi dari sumber tidak dikenal.')),
-                      );
-                    }
-                  } else {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Gagal mengunduh pembaruan.')),
-                      );
-                    }
-                  }
-                  
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                  }
-                },
-                child: const Text('Perbarui Sekarang'),
+    if (_status == 'available' && _updateInfo != null) {
+      return AlertDialog(
+        title: const Text('Pembaruan Tersedia'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Versi baru: ${_updateInfo!.latestVersion}', style: const TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              const Text('Catatan Rilis:', style: TextStyle(fontWeight: FontWeight.w500)),
+              const SizedBox(height: 4),
+              Container(
+                width: double.maxFinite,
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceVariant.withOpacity(0.4),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  _updateInfo!.releaseNotes.isEmpty ? 'Tidak ada catatan rilis.' : _updateInfo!.releaseNotes,
+                  style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                ),
               ),
             ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Nanti'),
+          ),
+          ElevatedButton(
+            onPressed: _startDownload,
+            child: const Text('Perbarui Sekarang'),
+          ),
+        ],
+      );
+    }
+
+    if (_status == 'downloading') {
+      return AlertDialog(
+        title: const Text('Mengunduh Pembaruan'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            LinearProgressIndicator(value: _downloadProgress),
+            const SizedBox(height: 12),
+            Text(
+              'Mengunduh: ${(_downloadProgress! * 100).toStringAsFixed(0)}%',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return AlertDialog(
+      title: const Text('Selesai'),
+      content: const Text('Pembaruan berhasil diunduh. Memulai pemasangan...'),
     );
   }
 }
