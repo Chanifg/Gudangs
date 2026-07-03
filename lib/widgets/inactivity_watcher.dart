@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
+import '../services/database_service.dart';
 
 class InactivityWatcher extends ConsumerStatefulWidget {
   final Widget child;
@@ -23,6 +24,11 @@ class _InactivityWatcherState extends ConsumerState<InactivityWatcher> {
 
   void _resetTimer() {
     _inactivityTimer?.cancel();
+    
+    // Bypass auto-lock if PIN setup was skipped
+    final settings = DatabaseService.settingsBox.get('settings');
+    if (settings?.isPinSkipped == true) return;
+
     final authState = ref.read(authProvider);
     if (authState.isAuthenticated) {
       _inactivityTimer = Timer(const Duration(minutes: 2), () {

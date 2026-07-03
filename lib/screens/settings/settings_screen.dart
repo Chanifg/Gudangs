@@ -19,6 +19,94 @@ import '../../services/update_service.dart';
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
+  void _showSetupPinFromSettingsDialog(BuildContext context, WidgetRef ref) {
+    final formKey = GlobalKey<FormState>();
+    final newPinController = TextEditingController();
+    final confirmPinController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Buat PIN Keamanan'),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: newPinController,
+                obscureText: true,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                decoration: const InputDecoration(
+                  labelText: 'PIN Baru (6 Digit)',
+                  counterText: '',
+                ),
+                validator: (value) {
+                  if (value == null || value.length != 6 || int.tryParse(value) == null) {
+                    return 'PIN harus 6 digit angka';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: confirmPinController,
+                obscureText: true,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                decoration: const InputDecoration(
+                  labelText: 'Konfirmasi PIN Baru',
+                  counterText: '',
+                ),
+                validator: (value) {
+                  if (value != newPinController.text) {
+                    return 'PIN konfirmasi tidak cocok';
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (formKey.currentState!.validate()) {
+                final success = await ref.read(settingsProvider.notifier).changePin(
+                      "000000",
+                      newPinController.text,
+                    );
+                if (success) {
+                  if (context.mounted) {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('PIN keamanan berhasil dibuat!')),
+                    );
+                    // Force refresh Settings screen UI
+                    ref.read(settingsProvider.notifier).refreshJobTypes();
+                  }
+                } else {
+                  if (ctx.mounted) {
+                    final error = ref.read(settingsProvider).errorMessage ?? 'Gagal membuat PIN';
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      SnackBar(content: Text(error)),
+                    );
+                  }
+                }
+              }
+            },
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showChangePinDialog(BuildContext context, WidgetRef ref) {
     final formKey = GlobalKey<FormState>();
     final oldPinController = TextEditingController();
@@ -389,10 +477,16 @@ class SettingsScreen extends ConsumerWidget {
                     const Divider(height: 1, color: Color(0xFFF1F5F9)),
                     ListTile(
                       leading: Icon(Icons.lock_outline, color: colorScheme.primary),
-                      title: const Text('Ubah PIN Keamanan'),
-                      subtitle: const Text('Ganti PIN masuk 6-digit'),
+                      title: Text(DatabaseService.settingsBox.get('settings')?.isPinSkipped == true ? 'Buat PIN Keamanan' : 'Ubah PIN Keamanan'),
+                      subtitle: Text(DatabaseService.settingsBox.get('settings')?.isPinSkipped == true ? 'Aktifkan PIN 6-digit untuk proteksi data' : 'Ganti PIN masuk 6-digit'),
                       trailing: const Icon(Icons.chevron_right),
-                      onTap: () => _showChangePinDialog(context, ref),
+                      onTap: () {
+                        if (DatabaseService.settingsBox.get('settings')?.isPinSkipped == true) {
+                          _showSetupPinFromSettingsDialog(context, ref);
+                        } else {
+                          _showChangePinDialog(context, ref);
+                        }
+                      },
                     ),
                   ],
                 ),

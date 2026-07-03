@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
+import '../services/database_service.dart';
 
 class LifecycleWatcher extends ConsumerStatefulWidget {
   final Widget child;
@@ -28,6 +29,10 @@ class _LifecycleWatcherState extends ConsumerState<LifecycleWatcher> with Widget
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Bypass auto-lock if PIN setup was skipped
+    final settings = DatabaseService.settingsBox.get('settings');
+    if (settings?.isPinSkipped == true) return;
+
     final authState = ref.read(authProvider);
 
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
