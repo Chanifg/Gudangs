@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
+import '../models/app_settings.dart';
 
 class AuthState {
   final bool isAuthenticated;
@@ -62,6 +63,25 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> _init() async {
     final hasPin = AuthService.hasPinSetup();
     final biometric = await AuthService.isBiometricsAvailable();
+    
+    // Check if PIN setup was skipped
+    final settings = DatabaseService.settingsBox.get('settings');
+    final isSkipped = settings?.isPinSkipped == true;
+
+    if (isSkipped) {
+      try {
+        await DatabaseService.openOperationalBoxes("000000");
+        state = AuthState(
+          isAuthenticated: true,
+          hasPin: true,
+          isBiometricAvailable: biometric,
+        );
+        return;
+      } catch (_) {
+        // Fallback to manual PIN entry/setup if DB open fails
+      }
+    }
+    
     state = state.copyWith(hasPin: hasPin, isBiometricAvailable: biometric);
   }
 
@@ -74,6 +94,26 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return true;
     } catch (e) {
       state = state.copyWith(errorMessage: 'Gagal membuat PIN: $e', isLoading: false);
+      return false;
+    }
+  }
+
+  Future<bool> skipPin() async {
+    state = state.copyWith(isLoading: true, errorMessage: null);
+    try {
+      // Register default PIN
+      await AuthService.registerPin("000000");
+
+      // Save skip status in settings
+      final settings = DatabaseService.settingsBox.get('settings') ?? AppSettings();
+      settings.isPinSkipped = true;
+      await DatabaseService.settingsBox.put('settings', settings);
+
+      await DatabaseService.openOperationalBoxes("000000");
+      state = state.copyWith(isAuthenticated: true, hasPin: true, isLoading: false);
+      return true;
+    } catch (e) {
+      state = state.copyWith(errorMessage: 'Gagal melewati PIN: $e', isLoading: false);
       return false;
     }
   }

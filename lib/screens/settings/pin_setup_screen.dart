@@ -84,9 +84,11 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
   }
 
   void _reset() {
-    _pin.clear();
-    _confirmPin.clear();
-    _isConfirming = false;
+    setState(() {
+      _pin.clear();
+      _confirmPin.clear();
+      _isConfirming = false;
+    });
   }
 
   @override
@@ -98,6 +100,36 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
       body: SafeArea(
         child: Column(
           children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(right: 16, top: 8),
+                  child: TextButton(
+                    onPressed: () async {
+                      final success = await ref.read(authProvider.notifier).skipPin();
+                      if (success && context.mounted) {
+                        context.go('/dashboard');
+                      }
+                    },
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Lewati',
+                          style: TextStyle(
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(Icons.arrow_forward_outlined, size: 16, color: colorScheme.primary),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
             const Spacer(),
             // Title & Info
             Icon(

@@ -267,6 +267,13 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     }
 
     await AuthService.registerPin(newPin);
+
+    // If it was skipped, it is no longer skipped
+    final settings = DatabaseService.settingsBox.get('settings') ?? AppSettings();
+    if (settings.isPinSkipped == true) {
+      settings.isPinSkipped = false;
+      await DatabaseService.settingsBox.put('settings', settings);
+    }
     
     // Log audit
     ref.read(auditLogProvider.notifier).logActivity(

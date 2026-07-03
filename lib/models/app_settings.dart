@@ -28,6 +28,9 @@ class AppSettings extends HiveObject {
   @HiveField(7)
   String? themeMode;
 
+  @HiveField(8)
+  bool? isPinSkipped;
+
   AppSettings({
     this.pinHash,
     this.isBiometricEnabled = true,
@@ -37,5 +40,6 @@ class AppSettings extends HiveObject {
     this.profileCompanyName = "Gudang Utama",
     this.profileImagePath,
     this.themeMode = "system",
+    this.isPinSkipped = false,
   });
 }
