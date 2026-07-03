@@ -25,11 +25,13 @@ class UpdateService {
   static Future<UpdateInfo?> checkForUpdate(String currentVersion) async {
     final client = HttpClient();
     try {
-      final uri = Uri.parse('https://api.github.com/repos/$_githubRepo/releases/latest');
+      // Add timestamp parameter to bypass cache
+      final uri = Uri.parse('https://api.github.com/repos/$_githubRepo/releases/latest?t=${DateTime.now().millisecondsSinceEpoch}');
       final request = await client.getUrl(uri);
       
-      // GitHub API requires a User-Agent header
+      // GitHub API requires a User-Agent header, and no-cache ensures fresh data
       request.headers.set(HttpHeaders.userAgentHeader, 'GudangsApp-Updater');
+      request.headers.set(HttpHeaders.cacheControlHeader, 'no-cache');
       
       final response = await request.close();
       if (response.statusCode != 200) {
