@@ -35,7 +35,10 @@ class UpdateService {
       
       final response = await request.close();
       if (response.statusCode != 200) {
-        return null;
+        if (response.statusCode == 404) {
+          throw const HttpException('Repository tidak ditemukan atau bersifat privat (HTTP 404).');
+        }
+        throw HttpException('Gagal menghubungi server rilis (HTTP ${response.statusCode}).');
       }
 
       final body = await response.transform(utf8.decoder).join();
@@ -72,8 +75,7 @@ class UpdateService {
         sizeBytes: size,
       );
     } catch (e) {
-      // Fail silently
-      return null;
+      rethrow;
     } finally {
       client.close();
     }
