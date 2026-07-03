@@ -79,6 +79,10 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
   void _loadSettings() {
     if (!DatabaseService.settingsBox.isOpen) return;
     final settings = DatabaseService.settingsBox.get('settings') ?? AppSettings();
+    if (settings.appVersion != '1.2.0') {
+      settings.appVersion = '1.2.0';
+      DatabaseService.settingsBox.put('settings', settings);
+    }
     
     List<JobType> list = [];
     if (DatabaseService.isOperationalOpen) {
