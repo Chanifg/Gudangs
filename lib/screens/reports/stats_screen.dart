@@ -322,7 +322,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    '${avgInbound.toStringAsFixed(0)} item/hari',
+                                    '${avgInbound.toStringAsFixed(avgInbound % 1 == 0 ? 0 : 1)} item/hari',
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.bold,
@@ -366,7 +366,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    '${avgOutbound.toStringAsFixed(0)} item/hari',
+                                    '${avgOutbound.toStringAsFixed(avgOutbound % 1 == 0 ? 0 : 1)} item/hari',
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.bold,
@@ -847,7 +847,14 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             showTitles: true,
             interval: interval,
             getTitlesWidget: (val, meta) {
-              final index = val.toInt();
+              // Ensure we only render titles for exact integer values to avoid duplication near bounds
+              if (val != val.roundToDouble()) {
+                return const SizedBox();
+              }
+              final index = val.round();
+              if (index % interval.toInt() != 0) {
+                return const SizedBox();
+              }
               if (index >= 0 && index < daysCount) {
                 final date = dateList[index];
                 String label = '';
@@ -1014,7 +1021,10 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             showTitles: true,
             interval: interval,
             getTitlesWidget: (val, meta) {
-              final index = val.toInt();
+              if (val != val.roundToDouble()) {
+                return const SizedBox();
+              }
+              final index = val.round();
               if (index % interval.toInt() != 0) {
                 return const SizedBox();
               }
