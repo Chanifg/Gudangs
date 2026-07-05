@@ -421,7 +421,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                   SizedBox(
                     height: 160,
                     child: LineChart(
-                      _buildLineChartData(filteredInbounds, filteredOutbounds, colorScheme),
+                      _buildLineChartData(filteredInbounds, filteredOutbounds, range, colorScheme),
                     ),
                   ),
                 ],
@@ -448,7 +448,7 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
                   SizedBox(
                     height: 160,
                     child: BarChart(
-                      _buildBarChartData(filteredInbounds, filteredOutbounds, colorScheme),
+                      _buildBarChartData(filteredInbounds, filteredOutbounds, range, colorScheme),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -759,27 +759,50 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
   LineChartData _buildLineChartData(
     List<InboundRecord> inbounds,
     List<OutboundRecord> outbounds,
+    DateTimeRange range,
     ColorScheme colorScheme,
   ) {
     List<FlSpot> inboundSpots = [];
     List<FlSpot> outboundSpots = [];
 
-    // Group by weekday (1 = Monday, 7 = Sunday)
-    final Map<int, double> inQty = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0};
-    final Map<int, double> outQty = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0};
+    final int daysCount = range.end.difference(range.start).inDays + 1;
+    List<DateTime> dateList = [];
+    for (int i = 0; i < daysCount; i++) {
+      dateList.add(range.start.add(Duration(days: i)));
+    }
+
+    final Map<String, double> inQty = {};
+    final Map<String, double> outQty = {};
+
+    String formatDateKey(DateTime date) {
+      return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+    }
 
     for (final r in inbounds) {
-      inQty[r.date.weekday] = (inQty[r.date.weekday] ?? 0.0) + r.quantity;
+      final key = formatDateKey(r.date);
+      inQty[key] = (inQty[key] ?? 0.0) + r.quantity;
     }
     for (final r in outbounds) {
       if (r.status != OutboundStatus.dibatalkan) {
-        outQty[r.date.weekday] = (outQty[r.date.weekday] ?? 0.0) + r.quantity;
+        final key = formatDateKey(r.date);
+        outQty[key] = (outQty[key] ?? 0.0) + r.quantity;
       }
     }
 
-    for (int i = 1; i <= 7; i++) {
-      inboundSpots.add(FlSpot((i - 1).toDouble(), inQty[i]!));
-      outboundSpots.add(FlSpot((i - 1).toDouble(), outQty[i]!));
+    for (int i = 0; i < daysCount; i++) {
+      final key = formatDateKey(dateList[i]);
+      inboundSpots.add(FlSpot(i.toDouble(), inQty[key] ?? 0.0));
+      outboundSpots.add(FlSpot(i.toDouble(), outQty[key] ?? 0.0));
+    }
+
+    double interval = 1.0;
+    if (daysCount > 7 && daysCount <= 14) {
+      interval = 2.0;
+    } else if (daysCount > 14 && daysCount <= 31) {
+      interval = 5.0;
+    } else if (daysCount > 31) {
+      interval = (daysCount / 6).floorToDouble();
+      if (interval < 1.0) interval = 1.0;
     }
 
     return LineChartData(
@@ -789,8 +812,14 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
           tooltipBorder: BorderSide(color: colorScheme.primary, width: 1.5),
           getTooltipItems: (List<LineBarSpot> touchedSpots) {
             return touchedSpots.map((LineBarSpot touchedSpot) {
+              final idx = touchedSpot.x.toInt();
+              String dateStr = '';
+              if (idx >= 0 && idx < dateList.length) {
+                final d = dateList[idx];
+                dateStr = "${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')} - ";
+              }
               return LineTooltipItem(
-                '${touchedSpot.y.toStringAsFixed(0)} item',
+                '$dateStr${touchedSpot.y.toStringAsFixed(0)} item',
                 const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
@@ -813,13 +842,22 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
         bottomTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
+            interval: interval,
             getTitlesWidget: (val, meta) {
-              const days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
-              if (val >= 0 && val < days.length) {
+              final index = val.toInt();
+              if (index >= 0 && index < daysCount) {
+                final date = dateList[index];
+                String label = '';
+                if (_selectedFilter == 'week') {
+                  const days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+                  label = days[(date.weekday - 1) % 7];
+                } else {
+                  label = "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}";
+                }
                 return SideTitleWidget(
                   axisSide: meta.axisSide,
                   child: Text(
-                    days[val.toInt()],
+                    label,
                     style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold),
                   ),
                 );
@@ -871,41 +909,54 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
   BarChartData _buildBarChartData(
     List<InboundRecord> inbounds,
     List<OutboundRecord> outbounds,
+    DateTimeRange range,
     ColorScheme colorScheme,
   ) {
     List<BarChartGroupData> barGroups = [];
 
-    // Group by weekday (1=Sen, 7=Min) in Millions
-    final Map<int, double> inVal = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0};
-    final Map<int, double> outVal = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0};
+    final int daysCount = range.end.difference(range.start).inDays + 1;
+    List<DateTime> dateList = [];
+    for (int i = 0; i < daysCount; i++) {
+      dateList.add(range.start.add(Duration(days: i)));
+    }
+
+    final Map<String, double> inVal = {};
+    final Map<String, double> outVal = {};
+
+    String formatDateKey(DateTime date) {
+      return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}";
+    }
 
     for (final r in inbounds) {
-      inVal[r.date.weekday] = (inVal[r.date.weekday] ?? 0.0) + (r.totalCost / 1000000);
+      final key = formatDateKey(r.date);
+      inVal[key] = (inVal[key] ?? 0.0) + (r.totalCost / 1000000);
     }
     for (final r in outbounds) {
       if (r.status != OutboundStatus.dibatalkan) {
-        outVal[r.date.weekday] = (outVal[r.date.weekday] ?? 0.0) + (r.totalValue / 1000000);
+        final key = formatDateKey(r.date);
+        outVal[key] = (outVal[key] ?? 0.0) + (r.totalValue / 1000000);
       }
     }
 
-    for (int i = 1; i <= 7; i++) {
+    for (int i = 0; i < daysCount; i++) {
+      final key = formatDateKey(dateList[i]);
       barGroups.add(
         BarChartGroupData(
-          x: i - 1,
+          x: i,
           barRods: [
             BarChartRodData(
-              toY: inVal[i]!,
+              toY: inVal[key] ?? 0.0,
               color: colorScheme.primary,
-              width: 10,
+              width: daysCount > 15 ? 4 : 10,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(3),
                 topRight: Radius.circular(3),
               ),
             ),
             BarChartRodData(
-              toY: outVal[i]!,
+              toY: outVal[key] ?? 0.0,
               color: colorScheme.primary.withValues(alpha: 0.3),
-              width: 10,
+              width: daysCount > 15 ? 4 : 10,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(3),
                 topRight: Radius.circular(3),
@@ -916,6 +967,16 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
       );
     }
 
+    double interval = 1.0;
+    if (daysCount > 7 && daysCount <= 14) {
+      interval = 2.0;
+    } else if (daysCount > 14 && daysCount <= 31) {
+      interval = 5.0;
+    } else if (daysCount > 31) {
+      interval = (daysCount / 6).floorToDouble();
+      if (interval < 1.0) interval = 1.0;
+    }
+
     return BarChartData(
       barTouchData: BarTouchData(
         touchTooltipData: BarTouchTooltipData(
@@ -923,8 +984,14 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
           tooltipBorder: BorderSide(color: colorScheme.primary, width: 1.5),
           getTooltipItem: (BarChartGroupData group, int groupIndex, BarChartRodData rod, int rodIndex) {
             final String prefix = rodIndex == 0 ? 'Biaya Inbound' : 'Nilai Outbound';
+            final idx = group.x.toInt();
+            String dateStr = '';
+            if (idx >= 0 && idx < dateList.length) {
+              final d = dateList[idx];
+              dateStr = "${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}\n";
+            }
             return BarTooltipItem(
-              '$prefix\nRp ${rod.toY.toStringAsFixed(1)} Jt',
+              '$dateStr$prefix\nRp ${rod.toY.toStringAsFixed(2)} Jt',
               const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
@@ -942,13 +1009,22 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
         bottomTitles: AxisTitles(
           sideTitles: SideTitles(
             showTitles: true,
+            interval: interval,
             getTitlesWidget: (val, meta) {
-              const days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
-              if (val >= 0 && val < days.length) {
+              final index = val.toInt();
+              if (index >= 0 && index < daysCount) {
+                final date = dateList[index];
+                String label = '';
+                if (_selectedFilter == 'week') {
+                  const days = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+                  label = days[(date.weekday - 1) % 7];
+                } else {
+                  label = "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}";
+                }
                 return SideTitleWidget(
                   axisSide: meta.axisSide,
                   child: Text(
-                    days[val.toInt()],
+                    label,
                     style: TextStyle(fontSize: 10, color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.bold),
                   ),
                 );
