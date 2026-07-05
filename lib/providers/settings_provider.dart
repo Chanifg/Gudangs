@@ -62,7 +62,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       : super(SettingsState(
           jobTypes: [],
           isBiometricEnabled: true,
-          appVersion: '1.3.3',
+          appVersion: '1.3.4',
           profileName: 'Admin Gudang Utama',
           profilePhone: '',
           profileCompanyName: 'Gudang Utama',
@@ -79,8 +79,8 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
   void _loadSettings() {
     if (!DatabaseService.settingsBox.isOpen) return;
     final settings = DatabaseService.settingsBox.get('settings') ?? AppSettings();
-    if (settings.appVersion != '1.3.3') {
-      settings.appVersion = '1.3.3';
+    if (settings.appVersion != '1.3.4') {
+      settings.appVersion = '1.3.4';
       DatabaseService.settingsBox.put('settings', settings);
     }
     
