@@ -34,7 +34,7 @@ class AppSettings extends HiveObject {
   AppSettings({
     this.pinHash,
     this.isBiometricEnabled = true,
-    this.appVersion = "1.3.2",
+    this.appVersion = "1.3.3",
     this.profileName = "Admin Gudang Utama",
     this.profilePhone = "",
     this.profileCompanyName = "Gudang Utama",

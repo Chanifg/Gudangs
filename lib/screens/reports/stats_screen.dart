@@ -25,9 +25,10 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     final now = DateTime.now();
     if (_selectedFilter == 'week') {
       final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+      final endOfWeek = startOfWeek.add(const Duration(days: 6));
       return DateTimeRange(
         start: DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day),
-        end: DateTime(now.year, now.month, now.day, 23, 59, 59),
+        end: DateTime(endOfWeek.year, endOfWeek.month, endOfWeek.day, 23, 59, 59),
       );
     } else if (_selectedFilter == 'month') {
       return DateTimeRange(
@@ -806,6 +807,8 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
     }
 
     return LineChartData(
+      minX: -0.5,
+      maxX: daysCount > 1 ? (daysCount - 1).toDouble() + 0.5 : 1.5,
       lineTouchData: LineTouchData(
         touchTooltipData: LineTouchTooltipData(
           getTooltipColor: (LineBarSpot touchedSpot) => const Color(0xFF1E293B),
@@ -1012,6 +1015,9 @@ class _StatsScreenState extends ConsumerState<StatsScreen> {
             interval: interval,
             getTitlesWidget: (val, meta) {
               final index = val.toInt();
+              if (index % interval.toInt() != 0) {
+                return const SizedBox();
+              }
               if (index >= 0 && index < daysCount) {
                 final date = dateList[index];
                 String label = '';
