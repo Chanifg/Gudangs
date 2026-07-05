@@ -24,9 +24,8 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
-      if (_tabController.indexIsChanging) {
-        setState(() {}); // Rebuild to update active tab index and FAB
-      }
+      if (!mounted) return;
+      setState(() {}); // Rebuild to update active tab index and FAB
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -136,6 +135,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                       controller: _rawSearchController,
                       onChanged: (val) {
                         ref.read(rawMaterialProvider.notifier).setSearchKeyword(val);
+                        setState(() {});
                       },
                       decoration: InputDecoration(
                         hintText: 'Cari bahan baku atau SKU...',
@@ -146,6 +146,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                                 onPressed: () {
                                   _rawSearchController.clear();
                                   ref.read(rawMaterialProvider.notifier).setSearchKeyword('');
+                                  setState(() {});
                                 },
                               )
                             : null,
@@ -334,6 +335,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                       controller: _finishedSearchController,
                       onChanged: (val) {
                         ref.read(finishedGoodProvider.notifier).setSearchKeyword(val);
+                        setState(() {});
                       },
                       decoration: InputDecoration(
                         hintText: 'Cari barang jadi atau SKU...',
@@ -344,6 +346,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                                 onPressed: () {
                                   _finishedSearchController.clear();
                                   ref.read(finishedGoodProvider.notifier).setSearchKeyword('');
+                                  setState(() {});
                                 },
                               )
                             : null,
