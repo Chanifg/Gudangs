@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/bill_of_materials.dart';
 import '../services/database_service.dart';
+import '../core/formatters.dart';
 import 'audit_log_provider.dart';
 import 'auth_provider.dart';
 
