@@ -141,6 +141,7 @@ class RawMaterialNotifier extends StateNotifier<RawMaterialState> {
     required String name,
     required String unit,
     required double defaultUnitCost,
+    double minimumStock = 0.0,
   }) async {
     final material = DatabaseService.rawMaterialsBox.get(id);
     if (material == null || material.isDeleted) {
@@ -158,6 +159,7 @@ class RawMaterialNotifier extends StateNotifier<RawMaterialState> {
     material.name = name.trim();
     material.unit = unit.trim();
     material.defaultUnitCost = defaultUnitCost;
+    material.minimumStock = minimumStock < 0 ? 0.0 : minimumStock;
     material.updatedAt = DateTime.now();
 
     await material.save();
@@ -165,7 +167,7 @@ class RawMaterialNotifier extends StateNotifier<RawMaterialState> {
     // Log Audit Trail
     await ref.read(auditLogProvider.notifier).logActivity(
       action: 'EDIT_BAHAN_BAKU',
-      description: 'Mengubah bahan baku: $oldName -> ${material.name} (Harga Beli: $oldCost -> $defaultUnitCost)',
+      description: 'Mengubah bahan baku: $oldName -> ${material.name} (Harga Beli: $oldCost -> $defaultUnitCost, Stok Min: ${material.minimumStock})',
     );
 
     loadRawMaterials();

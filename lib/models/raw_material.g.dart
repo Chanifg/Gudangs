@@ -26,13 +26,14 @@ class RawMaterialAdapter extends TypeAdapter<RawMaterial> {
       isDeleted: fields[6] as bool,
       createdAt: fields[7] as DateTime,
       updatedAt: fields[8] as DateTime,
+      minimumStock: fields[9] == null ? 0.0 : fields[9] as double,
     );
   }
 
   @override
   void write(BinaryWriter writer, RawMaterial obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(10)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -50,7 +51,9 @@ class RawMaterialAdapter extends TypeAdapter<RawMaterial> {
       ..writeByte(7)
       ..write(obj.createdAt)
       ..writeByte(8)
-      ..write(obj.updatedAt);
+      ..write(obj.updatedAt)
+      ..writeByte(9)
+      ..write(obj.minimumStock);
   }
 
   @override
@@ -63,3 +66,4 @@ class RawMaterialAdapter extends TypeAdapter<RawMaterial> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
+

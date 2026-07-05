@@ -31,6 +31,9 @@ class RawMaterial extends HiveObject {
   @HiveField(8)
   DateTime updatedAt;
 
+  @HiveField(9)
+  double minimumStock;
+
   RawMaterial({
     required this.id,
     required this.name,
@@ -41,6 +44,7 @@ class RawMaterial extends HiveObject {
     this.isDeleted = false,
     required this.createdAt,
     required this.updatedAt,
+    this.minimumStock = 0.0,
   });
 
   RawMaterial copyWith({
@@ -51,6 +55,7 @@ class RawMaterial extends HiveObject {
     double? defaultUnitCost,
     bool? isDeleted,
     DateTime? updatedAt,
+    double? minimumStock,
   }) {
     return RawMaterial(
       id: id,
@@ -62,6 +67,8 @@ class RawMaterial extends HiveObject {
       isDeleted: isDeleted ?? this.isDeleted,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      minimumStock: minimumStock ?? this.minimumStock,
     );
   }
 }
+

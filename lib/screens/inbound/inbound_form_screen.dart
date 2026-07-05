@@ -15,18 +15,21 @@ class InboundFormScreen extends ConsumerStatefulWidget {
 class _InboundFormScreenState extends ConsumerState<InboundFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _qtyController = TextEditingController();
-  final _priceController = TextEditingController();
+  final _totalCostController = TextEditingController();
   final _notesController = TextEditingController();
 
   String? _selectedProductId;
   DateTime _selectedDate = DateTime.now();
+
+  double _unitPrice = 0.0;
   double _totalCost = 0.0;
+  String _selectedUnit = '';
 
   @override
   void initState() {
     super.initState();
-    _qtyController.addListener(_updateTotalCost);
-    _priceController.addListener(_updateTotalCost);
+    _qtyController.addListener(_updateCalculations);
+    _totalCostController.addListener(_updateCalculations);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(rawMaterialProvider.notifier).loadRawMaterials();
     });
@@ -35,16 +38,17 @@ class _InboundFormScreenState extends ConsumerState<InboundFormScreen> {
   @override
   void dispose() {
     _qtyController.dispose();
-    _priceController.dispose();
+    _totalCostController.dispose();
     _notesController.dispose();
     super.dispose();
   }
 
-  void _updateTotalCost() {
+  void _updateCalculations() {
     final qty = double.tryParse(_qtyController.text) ?? 0.0;
-    final price = double.tryParse(_priceController.text) ?? 0.0;
+    final total = double.tryParse(_totalCostController.text) ?? 0.0;
     setState(() {
-      _totalCost = qty * price;
+      _totalCost = total;
+      _unitPrice = (qty > 0) ? total / qty : 0.0;
     });
   }
 
@@ -73,16 +77,20 @@ class _InboundFormScreenState extends ConsumerState<InboundFormScreen> {
 
     ref.read(inboundProvider.notifier).clearError();
 
+    final qty = double.tryParse(_qtyController.text) ?? 0.0;
+    final total = double.tryParse(_totalCostController.text) ?? 0.0;
+    final computedUnitPrice = qty > 0 ? total / qty : 0.0;
+
     final success = await ref.read(inboundProvider.notifier).addInbound(
           productId: _selectedProductId!,
-          quantity: double.tryParse(_qtyController.text) ?? 0.0,
-          pricePerUnit: double.tryParse(_priceController.text) ?? 0.0,
+          quantity: qty,
+          pricePerUnit: computedUnitPrice,
           date: _selectedDate,
           notes: _notesController.text.trim().isEmpty ? null : _notesController.text,
         );
 
     if (success && mounted) {
-      context.pop(); // Go back to transactions list
+      context.pop();
     }
   }
 
@@ -130,7 +138,7 @@ class _InboundFormScreenState extends ConsumerState<InboundFormScreen> {
                 DropdownButtonFormField<String>(
                   value: _selectedProductId,
                   decoration: const InputDecoration(
-                    labelText: 'Pilih Produk *',
+                    labelText: 'Pilih Bahan Baku *',
                   ),
                   items: activeProducts.map((prod) {
                     return DropdownMenuItem<String>(
@@ -141,9 +149,14 @@ class _InboundFormScreenState extends ConsumerState<InboundFormScreen> {
                   onChanged: (val) {
                     setState(() {
                       _selectedProductId = val;
+                      // Update unit label
+                      if (val != null) {
+                        final mat = activeProducts.firstWhere((p) => p.id == val);
+                        _selectedUnit = mat.unit;
+                      }
                     });
                   },
-                  validator: (value) => value == null ? 'Wajib memilih produk' : null,
+                  validator: (value) => value == null ? 'Wajib memilih bahan baku' : null,
                 ),
                 const SizedBox(height: 16),
 
@@ -151,13 +164,14 @@ class _InboundFormScreenState extends ConsumerState<InboundFormScreen> {
                 TextFormField(
                   controller: _qtyController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(
-                    labelText: 'Jumlah Unit Masuk *',
+                  decoration: InputDecoration(
+                    labelText: 'Jumlah yang Diterima *',
                     hintText: '0',
+                    suffixText: _selectedUnit.isNotEmpty ? _selectedUnit : 'unit',
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Jumlah unit tidak boleh kosong';
+                      return 'Jumlah tidak boleh kosong';
                     }
                     final n = double.tryParse(value);
                     if (n == null || n <= 0) {
@@ -168,18 +182,19 @@ class _InboundFormScreenState extends ConsumerState<InboundFormScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                // Cost price per unit Input
+                // Total purchase cost input
                 TextFormField(
-                  controller: _priceController,
+                  controller: _totalCostController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   decoration: const InputDecoration(
-                    labelText: 'Harga Beli Per Unit (Rupiah) *',
-                    hintText: '0',
+                    labelText: 'Total Harga Beli *',
+                    hintText: '50000',
                     prefixText: 'Rp ',
+                    helperText: 'Total harga yang kamu bayar untuk semua barang di atas',
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Harga per unit tidak boleh kosong';
+                      return 'Total harga beli tidak boleh kosong';
                     }
                     final n = double.tryParse(value);
                     if (n == null || n < 0) {
@@ -187,6 +202,68 @@ class _InboundFormScreenState extends ConsumerState<InboundFormScreen> {
                     }
                     return null;
                   },
+                ),
+                const SizedBox(height: 16),
+
+                // Real-time unit price card
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: colorScheme.primaryContainer.withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: colorScheme.primary.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Harga per ${_selectedUnit.isNotEmpty ? _selectedUnit : "unit"}',
+                              style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _unitPrice > 0 ? Formatters.formatRupiah(_unitPrice) : '—',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        width: 1,
+                        height: 36,
+                        color: colorScheme.outlineVariant,
+                        margin: const EdgeInsets.symmetric(horizontal: 12),
+                      ),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Total Biaya',
+                              style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _totalCost > 0 ? Formatters.formatRupiah(_totalCost) : '—',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurface,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 16),
 
@@ -216,31 +293,6 @@ class _InboundFormScreenState extends ConsumerState<InboundFormScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Real-time Cost Estimation Card
-                Card(
-                  color: colorScheme.surfaceVariant.withOpacity(0.3),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'TOTAL ESTIMASI BIAYA',
-                          style: Theme.of(context).textTheme.labelMedium,
-                        ),
-                        Text(
-                          Formatters.formatRupiah(_totalCost),
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                color: colorScheme.primary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-
                 // Submit Button
                 ElevatedButton(
                   onPressed: _saveInbound,
@@ -254,3 +306,4 @@ class _InboundFormScreenState extends ConsumerState<InboundFormScreen> {
     );
   }
 }
+

@@ -69,7 +69,7 @@ class RawMaterialDetailScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.edit_outlined),
             onPressed: () {
-              context.push('/raw-materials/$materialId/edit');
+              context.push('/inventory/raw-materials/$materialId/edit');
             },
           ),
           IconButton(
@@ -176,14 +176,43 @@ class RawMaterialDetailScreen extends ConsumerWidget {
                             style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
                           ),
                           const SizedBox(height: 4),
-                          Text(
-                            '${material.currentStock.toStringAsFixed(material.currentStock % 1 == 0 ? 0 : 1)} ${material.unit}',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              color: material.currentStock < 10 ? Colors.red : colorScheme.primary,
-                            ),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                '${material.currentStock.toStringAsFixed(material.currentStock % 1 == 0 ? 0 : 1)} ${material.unit}',
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: (material.minimumStock > 0 && material.currentStock < material.minimumStock)
+                                      ? Colors.red
+                                      : colorScheme.primary,
+                                ),
+                              ),
+                              if (material.minimumStock > 0 && material.currentStock < material.minimumStock) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(color: Colors.red.withValues(alpha: 0.4)),
+                                  ),
+                                  child: const Text(
+                                    '⚠ RENDAH',
+                                    style: TextStyle(fontSize: 9, color: Colors.red, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
+                          if (material.minimumStock > 0) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              'Min: ${material.minimumStock.toStringAsFixed(material.minimumStock % 1 == 0 ? 0 : 1)} ${material.unit}',
+                              style: const TextStyle(fontSize: 11, color: Colors.grey),
+                            ),
+                          ],
                         ],
                       ),
                     ),
