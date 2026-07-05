@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../providers/raw_material_provider.dart';
 import '../../providers/finished_good_provider.dart';
 import '../../providers/inbound_provider.dart';
+import '../../models/raw_material.dart';
+import '../../models/finished_good.dart';
 import '../../core/formatters.dart';
 
 class InboundFormScreen extends ConsumerStatefulWidget {
