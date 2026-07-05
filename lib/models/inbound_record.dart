@@ -34,6 +34,9 @@ class InboundRecord extends HiveObject {
   @HiveField(9)
   final DateTime createdAt;
 
+  @HiveField(10)
+  String? itemType;
+
   InboundRecord({
     required this.id,
     required this.productId,
@@ -45,5 +48,6 @@ class InboundRecord extends HiveObject {
     required this.date,
     this.notes,
     required this.createdAt,
+    this.itemType = 'raw_material',
   });
 }

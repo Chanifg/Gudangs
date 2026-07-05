@@ -27,13 +27,14 @@ class InboundRecordAdapter extends TypeAdapter<InboundRecord> {
       date: fields[7] as DateTime,
       notes: fields[8] as String?,
       createdAt: fields[9] as DateTime,
+      itemType: fields[10] == null ? 'raw_material' : fields[10] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, InboundRecord obj) {
     writer
-      ..writeByte(10)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -53,7 +54,9 @@ class InboundRecordAdapter extends TypeAdapter<InboundRecord> {
       ..writeByte(8)
       ..write(obj.notes)
       ..writeByte(9)
-      ..write(obj.createdAt);
+      ..write(obj.createdAt)
+      ..writeByte(10)
+      ..write(obj.itemType);
   }
 
   @override

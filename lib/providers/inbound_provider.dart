@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../models/inbound_record.dart';
 import '../services/database_service.dart';
 import 'raw_material_provider.dart';
+import 'finished_good_provider.dart';
 import 'stock_movement_provider.dart';
 import 'audit_log_provider.dart';
 import 'auth_provider.dart';
@@ -96,16 +97,35 @@ class InboundNotifier extends StateNotifier<InboundState> {
     required double pricePerUnit,
     required DateTime date,
     String? notes,
+    String itemType = 'raw_material',
   }) async {
     if (productId.isEmpty || quantity <= 0 || pricePerUnit < 0) {
       state = state.copyWith(errorMessage: 'Jumlah harus lebih besar dari 0 dan harga minimal 0');
       return false;
     }
 
-    final product = DatabaseService.rawMaterialsBox.get(productId);
-    if (product == null || product.isDeleted) {
-      state = state.copyWith(errorMessage: 'Bahan baku tidak ditemukan');
-      return false;
+    String name;
+    String sku;
+    String unit;
+
+    if (itemType == 'product') {
+      final product = DatabaseService.finishedGoodsBox.get(productId);
+      if (product == null || product.isDeleted) {
+        state = state.copyWith(errorMessage: 'Barang jadi tidak ditemukan');
+        return false;
+      }
+      name = product.name;
+      sku = product.sku;
+      unit = product.unit;
+    } else {
+      final product = DatabaseService.rawMaterialsBox.get(productId);
+      if (product == null || product.isDeleted) {
+        state = state.copyWith(errorMessage: 'Bahan baku tidak ditemukan');
+        return false;
+      }
+      name = product.name;
+      sku = product.sku;
+      unit = product.unit;
     }
 
     final id = const Uuid().v4();
@@ -114,57 +134,99 @@ class InboundNotifier extends StateNotifier<InboundState> {
     final record = InboundRecord(
       id: id,
       productId: productId,
-      productName: product.name,
-      productSku: product.sku,
+      productName: name,
+      productSku: sku,
       quantity: quantity,
       pricePerUnit: pricePerUnit,
       totalCost: totalCost,
       date: date,
       notes: notes?.trim(),
       createdAt: DateTime.now(),
+      itemType: itemType,
     );
 
     // 1. Save Inbound Record
     await DatabaseService.inboundBox.put(id, record);
 
-    // 2. Recalculate stock and Weighted Average Cost (WAC)
-    final double prevStock = product.currentStock;
-    final double prevCost = product.defaultUnitCost;
-    final double activePrevStock = prevStock > 0 ? prevStock : 0.0;
-    final double newStock = prevStock + quantity;
-    
-    double newWac = prevCost;
-    if (newStock > 0) {
-      newWac = ((activePrevStock * prevCost) + (quantity * pricePerUnit)) / (activePrevStock + quantity);
+    if (itemType == 'product') {
+      final product = DatabaseService.finishedGoodsBox.get(productId)!;
+      final double prevStock = product.currentStock;
+      final double prevCost = product.lastHPP ?? 0.0;
+      final double activePrevStock = prevStock > 0 ? prevStock : 0.0;
+      final double newStock = prevStock + quantity;
+      
+      double newWac = pricePerUnit;
+      if (newStock > 0) {
+        newWac = ((activePrevStock * prevCost) + (quantity * pricePerUnit)) / (activePrevStock + quantity);
+      }
+
+      product.currentStock = newStock;
+      product.lastHPP = newWac;
+      product.updatedAt = DateTime.now();
+      await product.save();
+
+      // 3. Log stock movement
+      await _ref.read(stockMovementProvider.notifier).logMovement(
+        itemId: product.id,
+        itemName: product.name,
+        itemType: 'product',
+        type: 'inbound',
+        quantity: quantity,
+        previousStock: prevStock,
+        newStock: newStock,
+        unitCost: pricePerUnit,
+        notes: notes?.trim() ?? 'Penerimaan barang jadi reseller',
+      );
+
+      // 4. Log audit activity
+      await _ref.read(auditLogProvider.notifier).logActivity(
+        action: 'INBOUND_BARANG_JADI',
+        description: 'Menerima barang jadi reseller: ${product.name} (Qty: $quantity ${product.unit}, Harga/Unit: ${Formatters.formatRupiah(pricePerUnit)}, Total Biaya: ${Formatters.formatRupiah(totalCost)})',
+      );
+
+      // 5. Refresh Providers
+      loadInboundRecords();
+      _ref.read(finishedGoodProvider.notifier).loadFinishedGoods();
+    } else {
+      final product = DatabaseService.rawMaterialsBox.get(productId)!;
+      final double prevStock = product.currentStock;
+      final double prevCost = product.defaultUnitCost;
+      final double activePrevStock = prevStock > 0 ? prevStock : 0.0;
+      final double newStock = prevStock + quantity;
+      
+      double newWac = prevCost;
+      if (newStock > 0) {
+        newWac = ((activePrevStock * prevCost) + (quantity * pricePerUnit)) / (activePrevStock + quantity);
+      }
+
+      product.currentStock = newStock;
+      product.defaultUnitCost = newWac;
+      product.updatedAt = DateTime.now();
+      await product.save();
+
+      // 3. Log stock movement
+      await _ref.read(stockMovementProvider.notifier).logMovement(
+        itemId: product.id,
+        itemName: product.name,
+        itemType: 'raw_material',
+        type: 'inbound',
+        quantity: quantity,
+        previousStock: prevStock,
+        newStock: newStock,
+        unitCost: pricePerUnit,
+        notes: notes?.trim() ?? 'Penerimaan bahan baku',
+      );
+
+      // 4. Log audit activity
+      await _ref.read(auditLogProvider.notifier).logActivity(
+        action: 'INBOUND_BAHAN_BAKU',
+        description: 'Menerima bahan baku: ${product.name} (Qty: $quantity ${product.unit}, Harga/Unit: ${Formatters.formatRupiah(pricePerUnit)}, Total Biaya: ${Formatters.formatRupiah(totalCost)})',
+      );
+
+      // 5. Refresh Providers
+      loadInboundRecords();
+      _ref.read(rawMaterialProvider.notifier).loadRawMaterials();
     }
-
-    product.currentStock = newStock;
-    product.defaultUnitCost = newWac;
-    product.updatedAt = DateTime.now();
-    await product.save();
-
-    // 3. Log stock movement
-    await _ref.read(stockMovementProvider.notifier).logMovement(
-      itemId: product.id,
-      itemName: product.name,
-      itemType: 'raw_material',
-      type: 'inbound',
-      quantity: quantity,
-      previousStock: prevStock,
-      newStock: newStock,
-      unitCost: pricePerUnit,
-      notes: notes?.trim() ?? 'Penerimaan bahan baku',
-    );
-
-    // 4. Log audit activity
-    await _ref.read(auditLogProvider.notifier).logActivity(
-      action: 'INBOUND_BAHAN_BAKU',
-      description: 'Menerima bahan baku: ${product.name} (Qty: $quantity ${product.unit}, Harga/Unit: ${Formatters.formatRupiah(pricePerUnit)}, Total Biaya: ${Formatters.formatRupiah(totalCost)})',
-    );
-
-    // 5. Refresh Providers
-    loadInboundRecords();
-    _ref.read(rawMaterialProvider.notifier).loadRawMaterials();
 
     return true;
   }
@@ -188,78 +250,139 @@ class InboundNotifier extends StateNotifier<InboundState> {
       return false;
     }
 
-    final product = DatabaseService.rawMaterialsBox.get(record.productId);
-    if (product == null || product.isDeleted) {
-      state = state.copyWith(errorMessage: 'Bahan baku tidak ditemukan');
-      return false;
-    }
+    final isProduct = record.itemType == 'product';
 
-    // Calculate stock delta
-    final delta = quantity - record.quantity;
+    if (isProduct) {
+      final product = DatabaseService.finishedGoodsBox.get(record.productId);
+      if (product == null || product.isDeleted) {
+        state = state.copyWith(errorMessage: 'Barang jadi tidak ditemukan');
+        return false;
+      }
 
-    // Validate that adjusting stock won't result in negative stock
-    if (product.currentStock + delta < 0) {
-      state = state.copyWith(
-        errorMessage: 'Penyesuaian jumlah tidak dapat disimpan karena akan menyebabkan total stok menjadi negatif (${product.currentStock + delta} ${product.unit})',
+      final delta = quantity - record.quantity;
+      if (product.currentStock + delta < 0) {
+        state = state.copyWith(
+          errorMessage: 'Penyesuaian jumlah tidak dapat disimpan karena akan menyebabkan total stok menjadi negatif (${product.currentStock + delta} ${product.unit})',
+        );
+        return false;
+      }
+
+      final double oldQty = record.quantity;
+      final double oldPrice = record.pricePerUnit;
+      
+      record.quantity = quantity;
+      record.pricePerUnit = pricePerUnit;
+      record.totalCost = quantity * pricePerUnit;
+      record.date = date;
+      record.notes = notes?.trim();
+      await record.save();
+
+      final double stockBeforeRevert = product.currentStock;
+      final double wacBeforeRevert = product.lastHPP ?? 0.0;
+      
+      final double stockAfterRevert = stockBeforeRevert - oldQty;
+      double wacAfterRevert = wacBeforeRevert;
+      if (stockAfterRevert > 0) {
+        wacAfterRevert = ((stockBeforeRevert * wacBeforeRevert) - (oldQty * oldPrice)) / stockAfterRevert;
+        if (wacAfterRevert < 0) wacAfterRevert = wacBeforeRevert;
+      }
+      
+      final double stockFinal = stockAfterRevert + quantity;
+      double wacFinal = wacAfterRevert;
+      if (stockFinal > 0) {
+        wacFinal = ((stockAfterRevert * wacAfterRevert) + (quantity * pricePerUnit)) / stockFinal;
+      }
+
+      product.currentStock = stockFinal;
+      product.lastHPP = wacFinal;
+      product.updatedAt = DateTime.now();
+      await product.save();
+
+      await _ref.read(stockMovementProvider.notifier).logMovement(
+        itemId: product.id,
+        itemName: product.name,
+        itemType: 'product',
+        type: 'inbound',
+        quantity: quantity,
+        previousStock: stockBeforeRevert,
+        newStock: stockFinal,
+        unitCost: pricePerUnit,
+        notes: 'Koreksi Inbound: ${notes?.trim() ?? ""}',
       );
-      return false;
+
+      await _ref.read(auditLogProvider.notifier).logActivity(
+        action: 'EDIT_INBOUND_BARANG_JADI',
+        description: 'Mengubah catatan inbound barang jadi ${product.name}: Qty $oldQty -> $quantity, Harga/Unit: ${Formatters.formatRupiah(oldPrice)} -> ${Formatters.formatRupiah(pricePerUnit)}',
+      );
+
+      loadInboundRecords();
+      _ref.read(finishedGoodProvider.notifier).loadFinishedGoods();
+    } else {
+      final product = DatabaseService.rawMaterialsBox.get(record.productId);
+      if (product == null || product.isDeleted) {
+        state = state.copyWith(errorMessage: 'Bahan baku tidak ditemukan');
+        return false;
+      }
+
+      final delta = quantity - record.quantity;
+      if (product.currentStock + delta < 0) {
+        state = state.copyWith(
+          errorMessage: 'Penyesuaian jumlah tidak dapat disimpan karena akan menyebabkan total stok menjadi negatif (${product.currentStock + delta} ${product.unit})',
+        );
+        return false;
+      }
+
+      final double oldQty = record.quantity;
+      final double oldPrice = record.pricePerUnit;
+      
+      record.quantity = quantity;
+      record.pricePerUnit = pricePerUnit;
+      record.totalCost = quantity * pricePerUnit;
+      record.date = date;
+      record.notes = notes?.trim();
+      await record.save();
+
+      final double stockBeforeRevert = product.currentStock;
+      final double wacBeforeRevert = product.defaultUnitCost;
+      
+      final double stockAfterRevert = stockBeforeRevert - oldQty;
+      double wacAfterRevert = wacBeforeRevert;
+      if (stockAfterRevert > 0) {
+        wacAfterRevert = ((stockBeforeRevert * wacBeforeRevert) - (oldQty * oldPrice)) / stockAfterRevert;
+        if (wacAfterRevert < 0) wacAfterRevert = product.defaultUnitCost;
+      }
+      
+      final double stockFinal = stockAfterRevert + quantity;
+      double wacFinal = wacAfterRevert;
+      if (stockFinal > 0) {
+        wacFinal = ((stockAfterRevert * wacAfterRevert) + (quantity * pricePerUnit)) / stockFinal;
+      }
+
+      product.currentStock = stockFinal;
+      product.defaultUnitCost = wacFinal;
+      product.updatedAt = DateTime.now();
+      await product.save();
+
+      await _ref.read(stockMovementProvider.notifier).logMovement(
+        itemId: product.id,
+        itemName: product.name,
+        itemType: 'raw_material',
+        type: 'inbound',
+        quantity: quantity,
+        previousStock: stockBeforeRevert,
+        newStock: stockFinal,
+        unitCost: pricePerUnit,
+        notes: 'Koreksi Inbound: ${notes?.trim() ?? ""}',
+      );
+
+      await _ref.read(auditLogProvider.notifier).logActivity(
+        action: 'EDIT_INBOUND_BAHAN_BAKU',
+        description: 'Mengubah catatan inbound ${product.name}: Qty $oldQty -> $quantity, Harga/Unit: ${Formatters.formatRupiah(oldPrice)} -> ${Formatters.formatRupiah(pricePerUnit)}',
+      );
+
+      loadInboundRecords();
+      _ref.read(rawMaterialProvider.notifier).loadRawMaterials();
     }
-
-    final double oldQty = record.quantity;
-    final double oldPrice = record.pricePerUnit;
-    
-    // 1. Update Inbound Record
-    record.quantity = quantity;
-    record.pricePerUnit = pricePerUnit;
-    record.totalCost = quantity * pricePerUnit;
-    record.date = date;
-    record.notes = notes?.trim();
-    await record.save();
-
-    // 2. Adjust WAC and Stock
-    final double stockBeforeRevert = product.currentStock;
-    final double wacBeforeRevert = product.defaultUnitCost;
-    
-    final double stockAfterRevert = stockBeforeRevert - oldQty;
-    double wacAfterRevert = wacBeforeRevert;
-    if (stockAfterRevert > 0) {
-      wacAfterRevert = ((stockBeforeRevert * wacBeforeRevert) - (oldQty * oldPrice)) / stockAfterRevert;
-      if (wacAfterRevert < 0) wacAfterRevert = product.defaultUnitCost;
-    }
-    
-    final double stockFinal = stockAfterRevert + quantity;
-    double wacFinal = wacAfterRevert;
-    if (stockFinal > 0) {
-      wacFinal = ((stockAfterRevert * wacAfterRevert) + (quantity * pricePerUnit)) / stockFinal;
-    }
-
-    product.currentStock = stockFinal;
-    product.defaultUnitCost = wacFinal;
-    product.updatedAt = DateTime.now();
-    await product.save();
-
-    // 3. Log stock movement
-    await _ref.read(stockMovementProvider.notifier).logMovement(
-      itemId: product.id,
-      itemName: product.name,
-      itemType: 'raw_material',
-      type: 'inbound',
-      quantity: quantity,
-      previousStock: stockBeforeRevert,
-      newStock: stockFinal,
-      unitCost: pricePerUnit,
-      notes: 'Koreksi Inbound: ${notes?.trim() ?? ""}',
-    );
-
-    // 4. Log audit activity
-    await _ref.read(auditLogProvider.notifier).logActivity(
-      action: 'EDIT_INBOUND_BAHAN_BAKU',
-      description: 'Mengubah catatan inbound ${product.name}: Qty $oldQty -> $quantity, Harga/Unit: ${Formatters.formatRupiah(oldPrice)} -> ${Formatters.formatRupiah(pricePerUnit)}',
-    );
-
-    // 5. Refresh Providers
-    loadInboundRecords();
-    _ref.read(rawMaterialProvider.notifier).loadRawMaterials();
 
     return true;
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/raw_material_provider.dart';
+import '../../providers/finished_good_provider.dart';
 import '../../providers/inbound_provider.dart';
 import '../../core/formatters.dart';
 
@@ -18,6 +19,7 @@ class _InboundFormScreenState extends ConsumerState<InboundFormScreen> {
   final _totalCostController = TextEditingController();
   final _notesController = TextEditingController();
 
+  String _itemType = 'raw_material'; // 'raw_material' or 'product'
   String? _selectedProductId;
   DateTime _selectedDate = DateTime.now();
 
@@ -32,6 +34,7 @@ class _InboundFormScreenState extends ConsumerState<InboundFormScreen> {
     _totalCostController.addListener(_updateCalculations);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(rawMaterialProvider.notifier).loadRawMaterials();
+      ref.read(finishedGoodProvider.notifier).loadFinishedGoods();
     });
   }
 
@@ -70,7 +73,7 @@ class _InboundFormScreenState extends ConsumerState<InboundFormScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedProductId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pilih produk terlebih dahulu')),
+        SnackBar(content: Text(_itemType == 'product' ? 'Pilih barang jadi terlebih dahulu' : 'Pilih bahan baku terlebih dahulu')),
       );
       return;
     }
@@ -87,6 +90,7 @@ class _InboundFormScreenState extends ConsumerState<InboundFormScreen> {
           pricePerUnit: computedUnitPrice,
           date: _selectedDate,
           notes: _notesController.text.trim().isEmpty ? null : _notesController.text,
+          itemType: _itemType,
         );
 
     if (success && mounted) {
@@ -97,10 +101,13 @@ class _InboundFormScreenState extends ConsumerState<InboundFormScreen> {
   @override
   Widget build(BuildContext context) {
     final rawMaterialState = ref.watch(rawMaterialProvider);
+    final finishedGoodState = ref.watch(finishedGoodProvider);
     final inboundState = ref.watch(inboundProvider);
     final colorScheme = Theme.of(context).colorScheme;
 
-    final activeProducts = rawMaterialState.rawMaterials;
+    final activeItems = _itemType == 'product'
+        ? finishedGoodState.finishedGoods.where((fg) => !fg.isDeleted).toList()
+        : rawMaterialState.rawMaterials;
 
     return Scaffold(
       appBar: AppBar(
@@ -134,29 +141,109 @@ class _InboundFormScreenState extends ConsumerState<InboundFormScreen> {
                   ),
                 ],
 
+                // Segmented toggle button for Bahan Baku vs Barang Jadi
+                Container(
+                  margin: const EdgeInsets.only(bottom: 20),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          onTap: () {
+                            if (_itemType != 'raw_material') {
+                              setState(() {
+                                _itemType = 'raw_material';
+                                _selectedProductId = null;
+                                _selectedUnit = '';
+                                _updateCalculations();
+                              });
+                            }
+                          },
+                          child: Container(
+                            alignment: Alignment.center,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: _itemType == 'raw_material' ? colorScheme.primary : colorScheme.surfaceVariant,
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(8),
+                                bottomLeft: Radius.circular(8),
+                              ),
+                              border: Border.all(color: _itemType == 'raw_material' ? colorScheme.primary : colorScheme.outlineVariant),
+                            ),
+                            child: Text(
+                              'Bahan Baku',
+                              style: TextStyle(
+                                color: _itemType == 'raw_material' ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () {
+                            if (_itemType != 'product') {
+                              setState(() {
+                                _itemType = 'product';
+                                _selectedProductId = null;
+                                _selectedUnit = '';
+                                _updateCalculations();
+                              });
+                            }
+                          },
+                          child: Container(
+                            alignment: Alignment.center,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: _itemType == 'product' ? colorScheme.primary : colorScheme.surfaceVariant,
+                              borderRadius: const BorderRadius.only(
+                                topRight: Radius.circular(8),
+                                bottomRight: Radius.circular(8),
+                              ),
+                              border: Border.all(color: _itemType == 'product' ? colorScheme.primary : colorScheme.outlineVariant),
+                            ),
+                            child: Text(
+                              'Barang Jadi (Reseller)',
+                              style: TextStyle(
+                                color: _itemType == 'product' ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
                 // Product Dropdown Selection
                 DropdownButtonFormField<String>(
                   value: _selectedProductId,
-                  decoration: const InputDecoration(
-                    labelText: 'Pilih Bahan Baku *',
+                  key: ValueKey('${_itemType}_dropdown'),
+                  decoration: InputDecoration(
+                    labelText: _itemType == 'product' ? 'Pilih Barang Jadi *' : 'Pilih Bahan Baku *',
                   ),
-                  items: activeProducts.map((prod) {
+                  items: activeItems.map((prod) {
+                    final String displaySku = (prod is RawMaterial) ? prod.sku : (prod as FinishedGood).sku;
                     return DropdownMenuItem<String>(
                       value: prod.id,
-                      child: Text('${prod.name} (${prod.sku})'),
+                      child: Text('${prod.name} ($displaySku)'),
                     );
                   }).toList(),
                   onChanged: (val) {
                     setState(() {
                       _selectedProductId = val;
-                      // Update unit label
                       if (val != null) {
-                        final mat = activeProducts.firstWhere((p) => p.id == val);
-                        _selectedUnit = mat.unit;
+                        final item = activeItems.firstWhere((p) => p.id == val);
+                        _selectedUnit = item.unit;
                       }
                     });
                   },
-                  validator: (value) => value == null ? 'Wajib memilih bahan baku' : null,
+                  validator: (value) => value == null
+                      ? (_itemType == 'product' ? 'Wajib memilih barang jadi' : 'Wajib memilih bahan baku')
+                      : null,
                 ),
                 const SizedBox(height: 16),
 

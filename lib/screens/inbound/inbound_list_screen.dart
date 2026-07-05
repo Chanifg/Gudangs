@@ -166,13 +166,43 @@ class _InboundListScreenState extends ConsumerState<InboundListScreen> {
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
                                         Expanded(
-                                          child: Text(
-                                            rec.productName,
-                                            style: const TextStyle(
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.bold,
-                                              color: Color(0xFF0B1C30),
-                                            ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Flexible(
+                                                child: Text(
+                                                  rec.productName,
+                                                  style: const TextStyle(
+                                                    fontSize: 15,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Color(0xFF0B1C30),
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: rec.itemType == 'product'
+                                                      ? Colors.purple.withValues(alpha: 0.1)
+                                                      : Colors.blue.withValues(alpha: 0.1),
+                                                  borderRadius: BorderRadius.circular(4),
+                                                  border: Border.all(
+                                                    color: rec.itemType == 'product'
+                                                        ? Colors.purple.withValues(alpha: 0.4)
+                                                        : Colors.blue.withValues(alpha: 0.4),
+                                                  ),
+                                                ),
+                                                child: Text(
+                                                  rec.itemType == 'product' ? 'BARANG JADI' : 'BAHAN BAKU',
+                                                  style: TextStyle(
+                                                    fontSize: 9,
+                                                    color: rec.itemType == 'product' ? Colors.purple[800] : Colors.blue[800],
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
                                         Text(
