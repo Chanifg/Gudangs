@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/finished_good_provider.dart';
+import '../../services/database_service.dart';
 
 class FinishedGoodFormScreen extends ConsumerStatefulWidget {
   final String? goodId;
@@ -19,7 +20,31 @@ class _FinishedGoodFormScreenState extends ConsumerState<FinishedGoodFormScreen>
   final _stockController = TextEditingController();
   final _priceController = TextEditingController();
 
+  bool _skuManuallyEdited = false;
+
   bool get _isEdit => widget.goodId != null;
+
+  /// Generate SKU: PJ-[3-letter abbreviation from name]-[NNN]
+  String _generateSku(String name) {
+    final words = name.trim().split(RegExp(r'\s+'));
+    String abbr;
+    if (words.length == 1) {
+      abbr = words[0].substring(0, words[0].length.clamp(0, 3)).toUpperCase();
+    } else {
+      abbr = words.take(3).map((w) => w.isNotEmpty ? w[0].toUpperCase() : '').join();
+      if (abbr.length < 2 && words[0].length >= 2) {
+        abbr = words[0].substring(0, 2).toUpperCase() + abbr.substring(abbr.length == 1 ? 1 : 0);
+      }
+    }
+    abbr = abbr.replaceAll(RegExp(r'[^A-Z]'), '');
+    if (abbr.isEmpty) abbr = 'XX';
+
+    final count = DatabaseService.isOperationalOpen
+        ? DatabaseService.finishedGoodsBox.values.where((g) => !g.isDeleted).length
+        : 0;
+    final seq = (count + 1).toString().padLeft(3, '0');
+    return 'PJ-$abbr-$seq';
+  }
 
   @override
   void initState() {
@@ -32,6 +57,13 @@ class _FinishedGoodFormScreenState extends ConsumerState<FinishedGoodFormScreen>
         _skuController.text = good.sku;
         _unitController.text = good.unit;
         _priceController.text = good.defaultUnitPrice.toString();
+      });
+    } else {
+      _nameController.addListener(() {
+        if (!_skuManuallyEdited && !_isEdit) {
+          final generated = _generateSku(_nameController.text);
+          _skuController.text = generated;
+        }
       });
     }
   }
@@ -108,6 +140,8 @@ class _FinishedGoodFormScreenState extends ConsumerState<FinishedGoodFormScreen>
                     ),
                   ),
                 ],
+
+                // Nama
                 TextFormField(
                   controller: _nameController,
                   decoration: const InputDecoration(
@@ -117,16 +151,44 @@ class _FinishedGoodFormScreenState extends ConsumerState<FinishedGoodFormScreen>
                   validator: (val) => val == null || val.trim().isEmpty ? 'Nama wajib diisi' : null,
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
-                  controller: _skuController,
-                  enabled: !_isEdit,
-                  decoration: const InputDecoration(
-                    labelText: 'Kode SKU *',
-                    hintText: 'Contoh: BJ-KMJ-L',
+
+                // SKU (hanya saat tambah)
+                if (!_isEdit) ...[
+                  TextFormField(
+                    controller: _skuController,
+                    onChanged: (val) {
+                      final expected = _generateSku(_nameController.text);
+                      setState(() {
+                        _skuManuallyEdited = val != expected;
+                      });
+                    },
+                    decoration: InputDecoration(
+                      labelText: 'Kode SKU *',
+                      hintText: 'Contoh: PJ-KPL-001',
+                      helperText: _skuManuallyEdited ? 'SKU diedit manual' : 'Dibuat otomatis dari nama',
+                      helperStyle: TextStyle(
+                        color: _skuManuallyEdited ? colorScheme.tertiary : colorScheme.primary,
+                        fontSize: 11,
+                      ),
+                      suffixIcon: _skuManuallyEdited
+                          ? IconButton(
+                              icon: const Icon(Icons.refresh, size: 18),
+                              tooltip: 'Reset ke SKU otomatis',
+                              onPressed: () {
+                                setState(() {
+                                  _skuController.text = _generateSku(_nameController.text);
+                                  _skuManuallyEdited = false;
+                                });
+                              },
+                            )
+                          : Icon(Icons.auto_fix_high, size: 18, color: colorScheme.primary),
+                    ),
+                    validator: (val) => val == null || val.trim().isEmpty ? 'SKU wajib diisi' : null,
                   ),
-                  validator: (val) => val == null || val.trim().isEmpty ? 'SKU wajib diisi' : null,
-                ),
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
+                ],
+
+                // Satuan
                 TextFormField(
                   controller: _unitController,
                   decoration: const InputDecoration(
@@ -181,3 +243,4 @@ class _FinishedGoodFormScreenState extends ConsumerState<FinishedGoodFormScreen>
     );
   }
 }
+

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/raw_material_provider.dart';
+import '../../services/database_service.dart';
 import '../../core/formatters.dart';
 
 class RawMaterialFormScreen extends ConsumerStatefulWidget {
@@ -26,7 +27,32 @@ class _RawMaterialFormScreenState extends ConsumerState<RawMaterialFormScreen> {
 
   double _calculatedUnitCost = 0.0;
 
+  bool _skuManuallyEdited = false;
+
   bool get _isEdit => widget.materialId != null;
+
+  /// Generate SKU: BB-[3-letter abbreviation from name]-[NNN]
+  String _generateSku(String name) {
+    final words = name.trim().split(RegExp(r'\s+'));
+    String abbr;
+    if (words.length == 1) {
+      abbr = words[0].substring(0, words[0].length.clamp(0, 3)).toUpperCase();
+    } else {
+      abbr = words.take(3).map((w) => w.isNotEmpty ? w[0].toUpperCase() : '').join();
+      // Pad to at least 2 chars
+      if (abbr.length < 2 && words[0].length >= 2) {
+        abbr = words[0].substring(0, 2).toUpperCase() + abbr.substring(abbr.length == 1 ? 1 : 0);
+      }
+    }
+    abbr = abbr.replaceAll(RegExp(r'[^A-Z]'), '');
+    if (abbr.isEmpty) abbr = 'XX';
+
+    final count = DatabaseService.isOperationalOpen
+        ? DatabaseService.rawMaterialsBox.values.where((m) => !m.isDeleted).length
+        : 0;
+    final seq = (count + 1).toString().padLeft(3, '0');
+    return 'BB-$abbr-$seq';
+  }
 
   @override
   void initState() {
@@ -44,6 +70,12 @@ class _RawMaterialFormScreenState extends ConsumerState<RawMaterialFormScreen> {
     } else {
       _stockController.addListener(_updateCalculatedCost);
       _totalCostController.addListener(_updateCalculatedCost);
+      _nameController.addListener(() {
+        if (!_skuManuallyEdited && !_isEdit) {
+          final generated = _generateSku(_nameController.text);
+          _skuController.text = generated;
+        }
+      });
     }
   }
 
@@ -150,9 +182,33 @@ class _RawMaterialFormScreenState extends ConsumerState<RawMaterialFormScreen> {
                 if (!_isEdit) ...[
                   TextFormField(
                     controller: _skuController,
-                    decoration: const InputDecoration(
+                    onChanged: (val) {
+                      // Jika user mengetik sendiri, tandai sebagai manual
+                      final expected = _generateSku(_nameController.text);
+                      setState(() {
+                        _skuManuallyEdited = val != expected;
+                      });
+                    },
+                    decoration: InputDecoration(
                       labelText: 'Kode SKU *',
-                      hintText: 'Contoh: BB-BSI-01',
+                      hintText: 'Contoh: BB-BSH-001',
+                      helperText: _skuManuallyEdited ? 'SKU diedit manual' : 'Dibuat otomatis dari nama',
+                      helperStyle: TextStyle(
+                        color: _skuManuallyEdited ? colorScheme.tertiary : colorScheme.primary,
+                        fontSize: 11,
+                      ),
+                      suffixIcon: _skuManuallyEdited
+                          ? IconButton(
+                              icon: const Icon(Icons.refresh, size: 18),
+                              tooltip: 'Reset ke SKU otomatis',
+                              onPressed: () {
+                                setState(() {
+                                  _skuController.text = _generateSku(_nameController.text);
+                                  _skuManuallyEdited = false;
+                                });
+                              },
+                            )
+                          : Icon(Icons.auto_fix_high, size: 18, color: colorScheme.primary),
                     ),
                     validator: (val) => val == null || val.trim().isEmpty ? 'SKU wajib diisi' : null,
                   ),
