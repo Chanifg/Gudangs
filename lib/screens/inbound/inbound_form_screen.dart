@@ -229,17 +229,22 @@ class _InboundFormScreenState extends ConsumerState<InboundFormScreen> {
                   ),
                   items: activeItems.map((prod) {
                     final String displaySku = (prod is RawMaterial) ? prod.sku : (prod as FinishedGood).sku;
+                    final String displayId = (prod is RawMaterial) ? prod.id : (prod as FinishedGood).id;
+                    final String displayName = (prod is RawMaterial) ? prod.name : (prod as FinishedGood).name;
                     return DropdownMenuItem<String>(
-                      value: prod.id,
-                      child: Text('${prod.name} ($displaySku)'),
+                      value: displayId,
+                      child: Text('$displayName ($displaySku)'),
                     );
                   }).toList(),
                   onChanged: (val) {
                     setState(() {
                       _selectedProductId = val;
                       if (val != null) {
-                        final item = activeItems.firstWhere((p) => p.id == val);
-                        _selectedUnit = item.unit;
+                        final item = activeItems.firstWhere((p) {
+                          final pId = (p is RawMaterial) ? p.id : (p as FinishedGood).id;
+                          return pId == val;
+                        });
+                        _selectedUnit = (item is RawMaterial) ? item.unit : (item as FinishedGood).unit;
                       }
                     });
                   },
