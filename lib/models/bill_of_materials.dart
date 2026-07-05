@@ -47,6 +47,9 @@ class BillOfMaterials extends HiveObject {
   @HiveField(6)
   DateTime updatedAt;
 
+  @HiveField(7)
+  double laborCost;
+
   BillOfMaterials({
     required this.id,
     required this.name,
@@ -55,5 +58,6 @@ class BillOfMaterials extends HiveObject {
     required this.components,
     required this.createdAt,
     required this.updatedAt,
+    this.laborCost = 0.0,
   });
 }

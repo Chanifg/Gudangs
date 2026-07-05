@@ -78,13 +78,14 @@ class ProductionRecordAdapter extends TypeAdapter<ProductionRecord> {
       date: fields[9] as DateTime,
       note: fields[10] as String?,
       createdAt: fields[11] as DateTime,
+      laborCost: fields[12] == null ? 0.0 : fields[12] as double,
     );
   }
 
   @override
   void write(BinaryWriter writer, ProductionRecord obj) {
     writer
-      ..writeByte(12)
+      ..writeByte(13)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -108,7 +109,9 @@ class ProductionRecordAdapter extends TypeAdapter<ProductionRecord> {
       ..writeByte(10)
       ..write(obj.note)
       ..writeByte(11)
-      ..write(obj.createdAt);
+      ..write(obj.createdAt)
+      ..writeByte(12)
+      ..write(obj.laborCost);
   }
 
   @override

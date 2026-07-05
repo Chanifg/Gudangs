@@ -211,7 +211,23 @@ class BomListScreen extends ConsumerWidget {
                   );
                 },
               ),
-              const SizedBox(height: 8),
+              if (bom.laborCost > 0) ...[
+                const Divider(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Biaya Tenaga Kerja Per Unit:',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF565E74)),
+                    ),
+                    Text(
+                      Formatters.formatRupiah(bom.laborCost),
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0B1C30)),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: 12),
               Align(
                 alignment: Alignment.bottomRight,
                 child: Text(

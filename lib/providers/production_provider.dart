@@ -177,7 +177,7 @@ class ProductionNotifier extends StateNotifier<ProductionState> {
       isEnough: allEnough,
       details: details,
       estimatedTotalCost: totalCost,
-      estimatedHPP: totalCost / quantityProduced,
+      estimatedHPP: (quantityProduced > 0) ? (totalCost / quantityProduced) + bom.laborCost : 0.0,
     );
   }
 
@@ -245,7 +245,7 @@ class ProductionNotifier extends StateNotifier<ProductionState> {
         updatedMaterials.add(rawMat);
       }
 
-      final hpp = totalMaterialCost / quantityProduced;
+      final hpp = (totalMaterialCost / quantityProduced) + bom.laborCost;
 
       // 3. Atomically write changes (save list)
       for (final rawMat in updatedMaterials) {
@@ -301,6 +301,7 @@ class ProductionNotifier extends StateNotifier<ProductionState> {
         date: date,
         note: note?.trim().isEmpty == true ? null : note?.trim(),
         createdAt: now,
+        laborCost: bom.laborCost,
       );
 
       await DatabaseService.productionBox.put(recordId, record);
@@ -308,7 +309,7 @@ class ProductionNotifier extends StateNotifier<ProductionState> {
       // Log Audit Trail
       await _ref.read(auditLogProvider.notifier).logActivity(
         action: 'PRODUKSI_BARANG_JADI',
-        description: 'Mengeksekusi produksi barang jadi ${finishedGood.name} (Jumlah: $quantityProduced ${finishedGood.unit}, HPP/Unit: ${Formatters.formatRupiah(hpp)}, Total Biaya Bahan: ${Formatters.formatRupiah(totalMaterialCost)})',
+        description: 'Mengeksekusi produksi barang jadi ${finishedGood.name} (Jumlah: $quantityProduced ${finishedGood.unit}, HPP/Unit: ${Formatters.formatRupiah(hpp)}, Total Biaya Bahan: ${Formatters.formatRupiah(totalMaterialCost)}, Biaya Tenaga: ${Formatters.formatRupiah(bom.laborCost)})',
       );
 
       // 4. Refresh providers

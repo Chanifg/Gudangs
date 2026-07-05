@@ -20,6 +20,7 @@ class BomFormScreen extends ConsumerStatefulWidget {
 class _BomFormScreenState extends ConsumerState<BomFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _laborCostController = TextEditingController();
   
   String? _selectedFinishedGoodId;
   List<BOMComponentRow> _componentRows = [];
@@ -45,6 +46,7 @@ class _BomFormScreenState extends ConsumerState<BomFormScreen> {
     final state = ref.read(bomProvider);
     final bom = state.boms.firstWhere((b) => b.id == widget.bomId);
     _nameController.text = bom.name;
+    _laborCostController.text = bom.laborCost == 0.0 ? '' : bom.laborCost.toStringAsFixed(0);
     _selectedFinishedGoodId = bom.finishedGoodId;
 
     setState(() {
@@ -60,6 +62,7 @@ class _BomFormScreenState extends ConsumerState<BomFormScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _laborCostController.dispose();
     for (final row in _componentRows) {
       row.qtyController.dispose();
     }
@@ -150,18 +153,22 @@ class _BomFormScreenState extends ConsumerState<BomFormScreen> {
 
     setState(() => _isSubmitting = true);
 
+    final laborCost = double.tryParse(_laborCostController.text) ?? 0.0;
+
     bool success;
     if (_isEdit) {
       success = await ref.read(bomProvider.notifier).updateBOM(
             id: widget.bomId!,
             name: _nameController.text,
             components: finalComponents,
+            laborCost: laborCost,
           );
     } else {
       success = await ref.read(bomProvider.notifier).addBOM(
             name: _nameController.text,
             finishedGoodId: _selectedFinishedGoodId!,
             components: finalComponents,
+            laborCost: laborCost,
           );
     }
 
@@ -233,6 +240,28 @@ class _BomFormScreenState extends ConsumerState<BomFormScreen> {
                             validator: (val) {
                               if (val == null || val.trim().isEmpty) {
                                 return 'Nama formula wajib diisi';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Labor Cost input
+                          TextFormField(
+                            controller: _laborCostController,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(
+                              labelText: 'Upah / Biaya Tenaga Kerja Per Unit (Rp)',
+                              hintText: '0',
+                              prefixText: 'Rp ',
+                              helperText: 'Biaya tenaga kerja untuk membuat 1 unit barang jadi ini',
+                            ),
+                            validator: (val) {
+                              if (val != null && val.trim().isNotEmpty) {
+                                final d = double.tryParse(val);
+                                if (d == null || d < 0) {
+                                  return 'Biaya harus berupa angka >= 0';
+                                }
                               }
                               return null;
                             },

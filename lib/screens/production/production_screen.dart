@@ -127,6 +127,16 @@ class _ProductionScreenState extends ConsumerState<ProductionScreen> {
                             Text('$qty $unit', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                           ],
                         ),
+                        if (bom.laborCost > 0) ...[
+                          const SizedBox(height: 4),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Upah Tenaga Kerja:', style: TextStyle(fontSize: 12, color: Color(0xFF565E74))),
+                              Text(Formatters.formatRupiah(bom.laborCost * qty), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ],
                         const SizedBox(height: 4),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -189,6 +199,12 @@ class _ProductionScreenState extends ConsumerState<ProductionScreen> {
     if (_selectedBOMId != null && qty > 0) {
       validationResult = ref.read(productionProvider.notifier).validateStock(_selectedBOMId!, qty);
     }
+
+    final selectedBOM = _selectedBOMId != null && bomState.boms.isNotEmpty
+        ? bomState.boms.firstWhere((b) => b.id == _selectedBOMId, orElse: () => bomState.boms.first)
+        : null;
+    final double laborCostPerUnit = selectedBOM?.laborCost ?? 0.0;
+    final double totalLaborCost = laborCostPerUnit * qty;
 
     final bool isStockEnough = validationResult?.isEnough ?? false;
 
@@ -435,7 +451,20 @@ class _ProductionScreenState extends ConsumerState<ProductionScreen> {
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 8),
+                                if (laborCostPerUnit > 0) ...[
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text('Total Biaya Tenaga Kerja', style: TextStyle(fontSize: 13, color: Color(0xFF565E74))),
+                                      Text(
+                                        Formatters.formatRupiah(totalLaborCost),
+                                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0B1C30)),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                                const Divider(height: 24),
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [

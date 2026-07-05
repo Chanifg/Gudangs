@@ -77,6 +77,7 @@ class BOMNotifier extends StateNotifier<BOMState> {
     required String name,
     required String finishedGoodId,
     required List<BOMComponent> components,
+    double laborCost = 0.0,
   }) async {
     if (name.trim().isEmpty || finishedGoodId.isEmpty || components.isEmpty) {
       state = state.copyWith(errorMessage: 'Semua field wajib diisi dan minimal terdapat 1 komponen');
@@ -108,6 +109,7 @@ class BOMNotifier extends StateNotifier<BOMState> {
       components: components,
       createdAt: now,
       updatedAt: now,
+      laborCost: laborCost,
     );
 
     await DatabaseService.bomBox.put(id, bom);
@@ -115,7 +117,7 @@ class BOMNotifier extends StateNotifier<BOMState> {
     // Log Audit Trail
     await ref.read(auditLogProvider.notifier).logActivity(
       action: 'TAMBAH_BOM',
-      description: 'Menambahkan formula BOM baru: ${bom.name} untuk produk ${bom.finishedGoodName}',
+      description: 'Menambahkan formula BOM baru: ${bom.name} untuk produk ${bom.finishedGoodName} (Upah Tenaga: ${Formatters.formatRupiah(laborCost)})',
     );
 
     loadBOMs();
@@ -126,6 +128,7 @@ class BOMNotifier extends StateNotifier<BOMState> {
     required String id,
     required String name,
     required List<BOMComponent> components,
+    double laborCost = 0.0,
   }) async {
     final bom = DatabaseService.bomBox.get(id);
     if (bom == null) {
@@ -141,6 +144,7 @@ class BOMNotifier extends StateNotifier<BOMState> {
     final oldName = bom.name;
     bom.name = name.trim();
     bom.components = components;
+    bom.laborCost = laborCost;
     bom.updatedAt = DateTime.now();
 
     await bom.save();
@@ -148,7 +152,7 @@ class BOMNotifier extends StateNotifier<BOMState> {
     // Log Audit Trail
     await ref.read(auditLogProvider.notifier).logActivity(
       action: 'EDIT_BOM',
-      description: 'Mengubah formula BOM: $oldName -> ${bom.name}',
+      description: 'Mengubah formula BOM: $oldName -> ${bom.name} (Upah Tenaga: ${Formatters.formatRupiah(laborCost)})',
     );
 
     loadBOMs();

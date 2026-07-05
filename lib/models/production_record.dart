@@ -70,6 +70,9 @@ class ProductionRecord extends HiveObject {
   @HiveField(11)
   final DateTime createdAt;
 
+  @HiveField(12)
+  double laborCost;
+
   ProductionRecord({
     required this.id,
     required this.bomId,
@@ -83,5 +86,6 @@ class ProductionRecord extends HiveObject {
     required this.date,
     this.note,
     required this.createdAt,
+    this.laborCost = 0.0,
   });
 }

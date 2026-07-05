@@ -77,7 +77,7 @@ class _ProductionHistoryScreenState extends ConsumerState<ProductionHistoryScree
     double totalCost = 0.0;
     for (final rec in prodState.records) {
       totalQtyProduced += rec.quantityProduced;
-      totalCost += rec.totalMaterialCost;
+      totalCost += rec.hpp * rec.quantityProduced;
     }
 
     return Scaffold(
@@ -326,17 +326,29 @@ class _ProductionHistoryScreenState extends ConsumerState<ProductionHistoryScree
 
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Total Biaya Material', style: TextStyle(fontSize: 11, color: Color(0xFF565E74))),
-                      const SizedBox(height: 2),
-                      Text(
-                        Formatters.formatRupiah(record.totalMaterialCost),
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0B1C30)),
-                      ),
-                    ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Total Biaya Material', style: TextStyle(fontSize: 11, color: Color(0xFF565E74))),
+                        const SizedBox(height: 2),
+                        Text(
+                          Formatters.formatRupiah(record.totalMaterialCost),
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0B1C30)),
+                        ),
+                        if (record.laborCost > 0) ...[
+                          const SizedBox(height: 6),
+                          const Text('Total Biaya Tenaga Kerja', style: TextStyle(fontSize: 11, color: Color(0xFF565E74))),
+                          const SizedBox(height: 2),
+                          Text(
+                            Formatters.formatRupiah(record.laborCost * record.quantityProduced),
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0B1C30)),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -347,6 +359,15 @@ class _ProductionHistoryScreenState extends ConsumerState<ProductionHistoryScree
                         Formatters.formatRupiah(record.hpp),
                         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF006E2F)),
                       ),
+                      if (record.laborCost > 0) ...[
+                        const SizedBox(height: 6),
+                        const Text('Upah Tenaga/Unit', style: TextStyle(fontSize: 11, color: Color(0xFF565E74))),
+                        const SizedBox(height: 2),
+                        Text(
+                          Formatters.formatRupiah(record.laborCost),
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF565E74)),
+                        ),
+                      ],
                     ],
                   ),
                 ],
